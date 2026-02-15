@@ -50,7 +50,15 @@ export default function Bridge() {
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-[#F9FAFB]">
-      <div className="w-full max-w-[480px] px-5 pt-5 pb-12">
+      {/* 공정위 문구 — fixed top bar */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-black/60 backdrop-blur-sm">
+        <p className="max-w-[480px] mx-auto px-4 py-2 text-[11px] text-white/80 text-center leading-relaxed">
+          이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의
+          수수료를 제공받습니다.
+        </p>
+      </div>
+
+      <div className="w-full max-w-[480px] px-5 pt-14 pb-12">
         {/* Top Bar */}
         <Link to="/" className="inline-flex items-center gap-1.5 text-[15px] text-gray-500 py-2">
           <ArrowLeft className="w-4 h-4" />
@@ -105,12 +113,6 @@ export default function Bridge() {
           최저가로 구매하기
           <ExternalLink className="w-4 h-4" />
         </a>
-
-        {/* 공정위 문구 */}
-        <p className="mt-8 px-4 text-[11px] text-gray-400 leading-relaxed text-center">
-          이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의
-          수수료를 제공받습니다.
-        </p>
       </div>
     </div>
   )

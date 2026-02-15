@@ -6,11 +6,27 @@ export default function Home() {
   const [query, setQuery] = useState('')
   const navigate = useNavigate()
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     const trimmed = query.trim()
     if (!trimmed) return
-    navigate(`/bridge/${encodeURIComponent(trimmed)}`)
+
+    try {
+      const res = await fetch('/data.json')
+      const data = await res.json()
+      const found = data.find(
+        (item) => item.code.toLowerCase() === trimmed.toLowerCase()
+      )
+
+      if (!found) {
+        alert('유효하지 않은 코드입니다')
+        return
+      }
+
+      navigate(`/bridge/${encodeURIComponent(found.code)}`)
+    } catch {
+      alert('유효하지 않은 코드입니다')
+    }
   }
 
   return (
