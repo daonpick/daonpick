@@ -1,0 +1,35 @@
+[
+  {
+    "id": "1",
+    "code": "DP001",
+    "name": "삼성 갤럭시 버즈3 프로",
+    "description": "AI 기반 노이즈 캔슬링과 고해상도 오디오를 지원하는 무선 이어버드",
+    "price": 359000,
+    "discount": 15,
+    "image": "https://placehold.co/400x400/f4f4f5/191919?text=Galaxy+Buds3",
+    "affiliateUrl": "https://example.com/aff/galaxy-buds3",
+    "category": "전자기기"
+  },
+  {
+    "id": "2",
+    "code": "DP002",
+    "name": "다이슨 에어랩 멀티 스타일러",
+    "description": "코안다 기류 기술로 머릿결 손상 없이 다양한 스타일링이 가능한 헤어 기기",
+    "price": 698000,
+    "discount": 10,
+    "image": "https://placehold.co/400x400/f4f4f5/191919?text=Dyson+Airwrap",
+    "affiliateUrl": "https://example.com/aff/dyson-airwrap",
+    "category": "뷰티"
+  },
+  {
+    "id": "3",
+    "code": "DP003",
+    "name": "스탠리 텀블러 IceFlow 890ml",
+    "description": "진공 단열 구조로 최대 12시간 보냉이 가능한 대용량 텀블러",
+    "price": 55000,
+    "discount": 20,
+    "image": "https://placehold.co/400x400/f4f4f5/191919?text=Stanley+Tumbler",
+    "affiliateUrl": "https://example.com/aff/stanley-tumbler",
+    "category": "리빙"
+  }
+]
