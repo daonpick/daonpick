@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import Papa from 'papaparse'
-import { Search, Eye, ExternalLink, ChevronRight } from 'lucide-react'
+import { Search, Eye, ChevronRight } from 'lucide-react'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Google Sheets CSV URLs (시트별 gid 지정)
+// Google Sheets CSV URLs
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const PRODUCTS_CSV_URL =
   'https://docs.google.com/spreadsheets/d/e/2PACX-1vSje1PMCjbJe528NHFMP4X5OEauML49AaRVb2sHUhJDfe3JwBub6raAxk4Zg-D-km2Cugw4xTy9E4cA/pub?output=csv'
@@ -14,29 +14,23 @@ const SETTINGS_CSV_URL =
 // 더미 데이터 (CSV 로드 실패 시 폴백)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const DUMMY_PRODUCTS = [
-  { id: '1', code: '10024', name: '접이식 논슬립 빨래건조대', category: '리빙', price: '29900', link: 'https://example.com/aff/10024', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10024', baseViews: '30', tag: 'hot' },
-  { id: '2', code: '10025', name: '무선 핸디 블렌더 3세대', category: '주방', price: '45900', link: 'https://example.com/aff/10025', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10025', baseViews: '58', tag: 'hot' },
-  { id: '3', code: '10026', name: '초경량 항공점퍼 바람막이', category: '패션', price: '39800', link: 'https://example.com/aff/10026', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10026', baseViews: '42', tag: 'hot' },
-  { id: '4', code: '10027', name: '스테인리스 진공 텀블러 750ml', category: '리빙', price: '18900', link: 'https://example.com/aff/10027', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10027', baseViews: '19', tag: 'hot' },
-  { id: '5', code: '10028', name: '프리미엄 두피 스케일러 브러시', category: '뷰티', price: '12900', link: 'https://example.com/aff/10028', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10028', baseViews: '65', tag: 'all' },
-  { id: '6', code: '10029', name: '고밀도 메모리폼 경추 베개', category: '리빙', price: '34900', link: 'https://example.com/aff/10029', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10029', baseViews: '37', tag: 'all' },
-  { id: '7', code: '10030', name: '음식물 쓰레기 냄새차단 휴지통', category: '주방', price: '28800', link: 'https://example.com/aff/10030', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10030', baseViews: '24', tag: 'all' },
-  { id: '8', code: '10031', name: '자동회전 화장품 정리대', category: '뷰티', price: '22500', link: 'https://example.com/aff/10031', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10031', baseViews: '51', tag: 'all' },
-  { id: '9', code: '10032', name: 'LED 센서등 무선 현관 조명', category: '리빙', price: '15800', link: 'https://example.com/aff/10032', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10032', baseViews: '44', tag: 'all' },
-  { id: '10', code: '10033', name: '올인원 멀티 충전 케이블', category: '가전', price: '9900', link: 'https://example.com/aff/10033', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10033', baseViews: '72', tag: 'all' },
+  { id: '1', code: '10024', name: '접이식 논슬립 빨래건조대', category: '주방특가', price: '29900', link: 'https://example.com/aff/10024', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10024', baseViews: '1.2만', tag: 'hot' },
+  { id: '2', code: '10025', name: '무선 핸디 블렌더 3세대', category: '주방특가', price: '45900', link: 'https://example.com/aff/10025', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10025', baseViews: '8천', tag: 'hot' },
+  { id: '3', code: '10026', name: '초경량 항공점퍼 바람막이', category: '생활꿀템', price: '39800', link: 'https://example.com/aff/10026', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10026', baseViews: '4.2만', tag: 'hot' },
+  { id: '4', code: '10027', name: '스테인리스 진공 텀블러 750ml', category: '생활꿀템', price: '18900', link: 'https://example.com/aff/10027', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10027', baseViews: '1.9만', tag: 'hot' },
+  { id: '5', code: '10028', name: '프리미엄 두피 스케일러 브러시', category: '뷰티SALE', price: '12900', link: 'https://example.com/aff/10028', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10028', baseViews: '6천', tag: 'all' },
+  { id: '6', code: '10029', name: '고밀도 메모리폼 경추 베개', category: '생활꿀템', price: '34900', link: 'https://example.com/aff/10029', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10029', baseViews: '3.7만', tag: 'all' },
 ]
 
 const DUMMY_SETTINGS = [
-  { type: 'button', label: '기획전', url: 'https://example.com/event' },
   { type: 'button', label: '주방특가', url: 'https://example.com/kitchen' },
+  { type: 'button', label: '생활꿀템', url: 'https://example.com/living' },
   { type: 'button', label: '뷰티SALE', url: 'https://example.com/beauty' },
-  { type: 'button', label: '가전딜', url: 'https://example.com/electronics' },
-  { type: 'button', label: '리빙마켓', url: 'https://example.com/living' },
   { type: 'fallback', label: 'fallback', url: 'https://example.com/event' },
 ]
 
-const HOT_LIMIT_STEP = 4
-const ALL_LIMIT_STEP = 6
+const INITIAL_COUNT = 4
+const LOAD_MORE_STEP = 6
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // CSV 파싱 헬퍼
@@ -51,14 +45,6 @@ function fetchCSV(url) {
       error: () => resolve(null),
     })
   })
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 조회수: baseViews 뒤에 랜덤 0~9 붙이기
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function fakeViews(base) {
-  const n = parseInt(base, 10) || 0
-  return `${n}${Math.floor(Math.random() * 10)}`
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -89,10 +75,12 @@ function ProductCard({ product }) {
         </p>
         <div className="mt-1 flex items-center gap-2">
           <span className="text-[12px] text-gray-400">{product.category}</span>
-          <span className="flex items-center gap-0.5 text-[12px] text-gray-400">
-            <Eye className="w-3 h-3" />
-            {fakeViews(product.baseViews)}
-          </span>
+          {product.baseViews && (
+            <span className="flex items-center gap-0.5 text-[12px] text-gray-400">
+              <Eye className="w-3 h-3" />
+              {product.baseViews}
+            </span>
+          )}
         </div>
       </div>
     </button>
@@ -106,8 +94,7 @@ export default function Home() {
   const [products, setProducts] = useState(DUMMY_PRODUCTS)
   const [settings, setSettings] = useState(DUMMY_SETTINGS)
   const [query, setQuery] = useState('')
-  const [hotLimit, setHotLimit] = useState(HOT_LIMIT_STEP)
-  const [allLimit, setAllLimit] = useState(ALL_LIMIT_STEP)
+  const [visibleCounts, setVisibleCounts] = useState({})
 
   // ── Google Sheets CSV 로드 ────────────────────────
   useEffect(() => {
@@ -136,10 +123,26 @@ export default function Home() {
     () => settings.find((s) => s.type === 'fallback')?.url || 'https://example.com/event',
     [settings]
   )
+  const categories = useMemo(
+    () => settings.filter((s) => s.type === 'category').map((s) => s.label),
+    [settings]
+  )
   const hotProducts = useMemo(
     () => products.filter((p) => p.tag === 'hot'),
     [products]
   )
+
+  // ── 더보기 핸들러 ─────────────────────────────────
+  const getVisible = useCallback(
+    (cat) => visibleCounts[cat] ?? INITIAL_COUNT,
+    [visibleCounts]
+  )
+  const handleLoadMore = useCallback((cat) => {
+    setVisibleCounts((prev) => ({
+      ...prev,
+      [cat]: (prev[cat] ?? INITIAL_COUNT) + LOAD_MORE_STEP,
+    }))
+  }, [])
 
   // ── 코드 검색 ──────────────────────────────────────
   const handleSearch = (e) => {
@@ -147,9 +150,7 @@ export default function Home() {
     const trimmed = query.trim()
     if (!trimmed) return
 
-    const found = products.find(
-      (p) => p.code === trimmed
-    )
+    const found = products.find((p) => p.code === trimmed)
 
     if (found) {
       window.location.href = found.link
@@ -201,17 +202,16 @@ export default function Home() {
           </div>
         </form>
 
-        {/* ── Horizontal Nav (Settings 시트 연동) ── */}
+        {/* ── Horizontal Nav ── */}
         {navButtons.length > 0 && (
           <div className="mt-6 -mx-5 px-5 flex gap-2.5 overflow-x-auto scrollbar-hide">
             {navButtons.map((btn) => (
               <button
                 key={btn.label}
                 onClick={() => { window.location.href = btn.url }}
-                className="shrink-0 flex items-center gap-1 px-4 py-2.5 rounded-full bg-white ring-1 ring-gray-200 text-[13px] font-medium text-gray-700 active:scale-95 transition-transform shadow-sm"
+                className="shrink-0 px-4 py-2.5 rounded-full bg-white ring-1 ring-gray-200 text-[13px] font-medium text-gray-700 active:scale-95 transition-transform shadow-sm"
               >
                 {btn.label}
-                <ExternalLink className="w-3 h-3 text-gray-400" />
               </button>
             ))}
           </div>
@@ -220,19 +220,19 @@ export default function Home() {
         {/* ── 🔥 방금 뜬 꿀템 ── */}
         {hotProducts.length > 0 && (
           <section className="mt-9">
-            <h2 className="text-[18px] font-bold text-gray-900">
+            <h2 className="text-xl font-bold text-gray-900 px-1">
               🔥 방금 뜬 꿀템
             </h2>
 
             <div className="mt-4 grid grid-cols-2 gap-3">
-              {hotProducts.slice(0, hotLimit).map((p) => (
+              {hotProducts.slice(0, getVisible('__hot__')).map((p) => (
                 <ProductCard key={p.code} product={p} />
               ))}
             </div>
 
-            {hotLimit < hotProducts.length && (
+            {getVisible('__hot__') < hotProducts.length && (
               <button
-                onClick={() => setHotLimit((v) => v + HOT_LIMIT_STEP)}
+                onClick={() => handleLoadMore('__hot__')}
                 className="mt-4 w-full py-3 rounded-2xl bg-white ring-1 ring-gray-200 text-[14px] font-medium text-gray-600 flex items-center justify-center gap-1 active:scale-[0.98] transition-transform"
               >
                 더보기
@@ -242,26 +242,36 @@ export default function Home() {
           </section>
         )}
 
-        {/* ── 전체 ── */}
-        <section className="mt-10">
-          <h2 className="text-[18px] font-bold text-gray-900">전체</h2>
+        {/* ── 카테고리별 섹션 (settings 시트 기반) ── */}
+        {categories.map((cat) => {
+          const filtered = products.filter((p) => p.category === cat)
+          if (filtered.length === 0) return null
+          const visible = getVisible(cat)
 
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            {products.slice(0, allLimit).map((p) => (
-              <ProductCard key={p.code} product={p} />
-            ))}
-          </div>
+          return (
+            <section key={cat} className="mt-10">
+              <h2 className="text-xl font-bold text-gray-900 mb-4 px-1">
+                {cat}
+              </h2>
 
-          {allLimit < products.length && (
-            <button
-              onClick={() => setAllLimit((v) => v + ALL_LIMIT_STEP)}
-              className="mt-4 w-full py-3 rounded-2xl bg-white ring-1 ring-gray-200 text-[14px] font-medium text-gray-600 flex items-center justify-center gap-1 active:scale-[0.98] transition-transform"
-            >
-              더보기
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          )}
-        </section>
+              <div className="grid grid-cols-2 gap-3">
+                {filtered.slice(0, visible).map((p) => (
+                  <ProductCard key={p.code} product={p} />
+                ))}
+              </div>
+
+              {visible < filtered.length && (
+                <button
+                  onClick={() => handleLoadMore(cat)}
+                  className="mt-4 w-full py-3 rounded-2xl bg-white ring-1 ring-gray-200 text-[14px] font-medium text-gray-600 flex items-center justify-center gap-1 active:scale-[0.98] transition-transform"
+                >
+                  더보기
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
+            </section>
+          )
+        })}
       </div>
     </div>
   )
