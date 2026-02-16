@@ -180,7 +180,7 @@ export default function Home() {
       const [csvProducts, csvSettings, viewsResult] = await Promise.all([
         fetchCSV(PRODUCTS_CSV_URL),
         fetchCSV(SETTINGS_CSV_URL),
-        supabase.from('views').select('*'),
+        supabase ? supabase.from('views').select('*') : Promise.resolve({ data: null }),
       ])
       if (cancelled) return
 
@@ -257,7 +257,7 @@ export default function Home() {
   // ── 상품 클릭: 조회수 증가 + 이동 ─────────────────
   const handleClickProduct = useCallback(async (product) => {
     // fire-and-forget: RPC 호출 후 바로 이동
-    supabase.rpc('increment_view', { product_code: String(product.code) })
+    if (supabase) supabase.rpc('increment_view', { product_code: String(product.code) })
     window.location.href = product.link
   }, [])
 
