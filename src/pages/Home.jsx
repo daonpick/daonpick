@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import Papa from 'papaparse'
-import { Search, Eye, ChevronRight } from 'lucide-react'
+import { Search, Eye, ChevronDown } from 'lucide-react'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Google Sheets CSV URLs
@@ -14,12 +14,12 @@ const SETTINGS_CSV_URL =
 // 더미 데이터 (CSV 로드 실패 시 폴백)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const DUMMY_PRODUCTS = [
-  { id: '1', code: '10024', name: '접이식 논슬립 빨래건조대', category: '주방특가', price: '29900', link: 'https://example.com/aff/10024', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10024', baseViews: '1.2만', tag: 'hot' },
-  { id: '2', code: '10025', name: '무선 핸디 블렌더 3세대', category: '주방특가', price: '45900', link: 'https://example.com/aff/10025', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10025', baseViews: '8천', tag: 'hot' },
-  { id: '3', code: '10026', name: '초경량 항공점퍼 바람막이', category: '생활꿀템', price: '39800', link: 'https://example.com/aff/10026', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10026', baseViews: '4.2만', tag: 'hot' },
-  { id: '4', code: '10027', name: '스테인리스 진공 텀블러 750ml', category: '생활꿀템', price: '18900', link: 'https://example.com/aff/10027', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10027', baseViews: '1.9만', tag: 'hot' },
-  { id: '5', code: '10028', name: '프리미엄 두피 스케일러 브러시', category: '뷰티SALE', price: '12900', link: 'https://example.com/aff/10028', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10028', baseViews: '6천', tag: 'all' },
-  { id: '6', code: '10029', name: '고밀도 메모리폼 경추 베개', category: '생활꿀템', price: '34900', link: 'https://example.com/aff/10029', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10029', baseViews: '3.7만', tag: 'all' },
+  { id: '1', code: '10024', name: '접이식 논슬립 빨래건조대', category: '주방용품', price: '29900', link: 'https://example.com/aff/10024', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10024', baseViews: '1.2만', tag: 'hot' },
+  { id: '2', code: '10025', name: '무선 핸디 블렌더 3세대', category: '주방용품', price: '45900', link: 'https://example.com/aff/10025', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10025', baseViews: '8천', tag: 'hot' },
+  { id: '3', code: '10026', name: '초경량 항공점퍼 바람막이', category: '생활잡화', price: '39800', link: 'https://example.com/aff/10026', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10026', baseViews: '4.2만', tag: 'hot' },
+  { id: '4', code: '10027', name: '스테인리스 진공 텀블러 750ml', category: '생활잡화', price: '18900', link: 'https://example.com/aff/10027', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10027', baseViews: '1.9만', tag: 'hot' },
+  { id: '5', code: '10028', name: '프리미엄 두피 스케일러 브러시', category: '뷰티', price: '12900', link: 'https://example.com/aff/10028', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10028', baseViews: '6천', tag: 'all' },
+  { id: '6', code: '10029', name: '고밀도 메모리폼 경추 베개', category: '생활잡화', price: '34900', link: 'https://example.com/aff/10029', image: 'https://placehold.co/400x400/f4f4f5/191919?text=10029', baseViews: '3.7만', tag: 'all' },
 ]
 
 const DUMMY_SETTINGS = [
@@ -48,6 +48,25 @@ function fetchCSV(url) {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 로딩 스켈레톤
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function SkeletonGrid() {
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="animate-pulse">
+          <div className="aspect-square rounded-2xl bg-gray-200" />
+          <div className="mt-2.5 px-0.5 space-y-2">
+            <div className="h-4 w-3/4 rounded bg-gray-200" />
+            <div className="h-3 w-1/2 rounded bg-gray-200" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 상품 카드
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function ProductCard({ product }) {
@@ -56,7 +75,6 @@ function ProductCard({ product }) {
       onClick={() => { window.location.href = product.link }}
       className="text-left w-full group"
     >
-      {/* 이미지 + 코드 뱃지 */}
       <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100">
         <img
           src={product.image}
@@ -68,7 +86,6 @@ function ProductCard({ product }) {
         </span>
       </div>
 
-      {/* 정보 */}
       <div className="mt-2.5 px-0.5">
         <p className="text-[14px] text-gray-900 font-medium leading-snug truncate">
           {product.name}
@@ -93,6 +110,7 @@ function ProductCard({ product }) {
 export default function Home() {
   const [products, setProducts] = useState(DUMMY_PRODUCTS)
   const [settings, setSettings] = useState(DUMMY_SETTINGS)
+  const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [visibleCounts, setVisibleCounts] = useState({})
 
@@ -108,6 +126,7 @@ export default function Home() {
       if (cancelled) return
       if (csvProducts?.length) setProducts(csvProducts)
       if (csvSettings?.length) setSettings(csvSettings)
+      setLoading(false)
     }
 
     load()
@@ -123,24 +142,33 @@ export default function Home() {
     () => settings.find((s) => s.type === 'fallback')?.url || 'https://example.com/event',
     [settings]
   )
-  const categories = useMemo(
-    () => settings.filter((s) => s.type === 'category').map((s) => s.label),
-    [settings]
-  )
   const hotProducts = useMemo(
     () => products.filter((p) => p.tag === 'hot'),
     [products]
   )
 
+  // product.category 기준으로 고유 카테고리 추출 (등장 순서 유지)
+  const categories = useMemo(() => {
+    const seen = new Set()
+    const list = []
+    for (const p of products) {
+      if (p.category && !seen.has(p.category)) {
+        seen.add(p.category)
+        list.push(p.category)
+      }
+    }
+    return list
+  }, [products])
+
   // ── 더보기 핸들러 ─────────────────────────────────
   const getVisible = useCallback(
-    (cat) => visibleCounts[cat] ?? INITIAL_COUNT,
+    (key) => visibleCounts[key] ?? INITIAL_COUNT,
     [visibleCounts]
   )
-  const handleLoadMore = useCallback((cat) => {
+  const handleLoadMore = useCallback((key) => {
     setVisibleCounts((prev) => ({
       ...prev,
-      [cat]: (prev[cat] ?? INITIAL_COUNT) + LOAD_MORE_STEP,
+      [key]: (prev[key] ?? INITIAL_COUNT) + LOAD_MORE_STEP,
     }))
   }, [])
 
@@ -202,7 +230,7 @@ export default function Home() {
           </div>
         </form>
 
-        {/* ── Horizontal Nav ── */}
+        {/* ── Horizontal Nav (텍스트만) ── */}
         {navButtons.length > 0 && (
           <div className="mt-6 -mx-5 px-5 flex gap-2.5 overflow-x-auto scrollbar-hide">
             {navButtons.map((btn) => (
@@ -217,61 +245,74 @@ export default function Home() {
           </div>
         )}
 
-        {/* ── 🔥 방금 뜬 꿀템 ── */}
-        {hotProducts.length > 0 && (
-          <section className="mt-9">
-            <h2 className="text-xl font-bold text-gray-900 px-1">
-              🔥 방금 뜬 꿀템
-            </h2>
-
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              {hotProducts.slice(0, getVisible('__hot__')).map((p) => (
-                <ProductCard key={p.code} product={p} />
-              ))}
-            </div>
-
-            {getVisible('__hot__') < hotProducts.length && (
-              <button
-                onClick={() => handleLoadMore('__hot__')}
-                className="mt-4 w-full py-3 rounded-2xl bg-white ring-1 ring-gray-200 text-[14px] font-medium text-gray-600 flex items-center justify-center gap-1 active:scale-[0.98] transition-transform"
-              >
-                더보기
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            )}
-          </section>
+        {/* ── 로딩 스켈레톤 ── */}
+        {loading && (
+          <div className="mt-9">
+            <div className="h-6 w-32 rounded bg-gray-200 animate-pulse mb-4" />
+            <SkeletonGrid />
+          </div>
         )}
 
-        {/* ── 카테고리별 섹션 (settings 시트 기반) ── */}
-        {categories.map((cat) => {
-          const filtered = products.filter((p) => p.category === cat)
-          if (filtered.length === 0) return null
-          const visible = getVisible(cat)
+        {/* ── 데이터 로드 완료 후 렌더 ── */}
+        {!loading && (
+          <>
+            {/* 🔥 방금 뜬 꿀템 */}
+            {hotProducts.length > 0 && (
+              <section className="mt-9">
+                <h2 className="text-xl font-bold text-gray-900 px-1">
+                  🔥 방금 뜬 꿀템
+                </h2>
 
-          return (
-            <section key={cat} className="mt-10">
-              <h2 className="text-xl font-bold text-gray-900 mb-4 px-1">
-                {cat}
-              </h2>
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  {hotProducts.slice(0, getVisible('__hot__')).map((p) => (
+                    <ProductCard key={p.code} product={p} />
+                  ))}
+                </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                {filtered.slice(0, visible).map((p) => (
-                  <ProductCard key={p.code} product={p} />
-                ))}
-              </div>
+                {getVisible('__hot__') < hotProducts.length && (
+                  <button
+                    onClick={() => handleLoadMore('__hot__')}
+                    className="mt-4 w-full py-3 rounded-2xl bg-white ring-1 ring-gray-200 text-[14px] font-medium text-gray-600 flex items-center justify-center gap-1 active:scale-[0.98] transition-transform"
+                  >
+                    더보기
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                )}
+              </section>
+            )}
 
-              {visible < filtered.length && (
-                <button
-                  onClick={() => handleLoadMore(cat)}
-                  className="mt-4 w-full py-3 rounded-2xl bg-white ring-1 ring-gray-200 text-[14px] font-medium text-gray-600 flex items-center justify-center gap-1 active:scale-[0.98] transition-transform"
-                >
-                  더보기
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              )}
-            </section>
-          )
-        })}
+            {/* 카테고리별 섹션 (product.category 기준 자동 생성) */}
+            {categories.map((cat) => {
+              const filtered = products.filter((p) => p.category === cat)
+              if (filtered.length === 0) return null
+              const visible = getVisible(cat)
+
+              return (
+                <section key={cat} className="mt-10">
+                  <h2 className="text-xl font-bold text-gray-900 mb-4 px-1">
+                    {cat}
+                  </h2>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {filtered.slice(0, visible).map((p) => (
+                      <ProductCard key={p.code} product={p} />
+                    ))}
+                  </div>
+
+                  {visible < filtered.length && (
+                    <button
+                      onClick={() => handleLoadMore(cat)}
+                      className="mt-4 w-full py-3 rounded-2xl bg-white ring-1 ring-gray-200 text-[14px] font-medium text-gray-600 flex items-center justify-center gap-1 active:scale-[0.98] transition-transform"
+                    >
+                      더보기
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                  )}
+                </section>
+              )
+            })}
+          </>
+        )}
       </div>
     </div>
   )
