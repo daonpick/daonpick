@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import Papa from 'papaparse'
 import { Search, Eye, ChevronDown } from 'lucide-react'
+import { supabase } from '../supabaseClient'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Google Sheets CSV URLs
@@ -14,12 +15,14 @@ const SETTINGS_CSV_URL =
 // 더미 데이터 (CSV 로드 실패 시 폴백)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const DUMMY_PRODUCTS = [
-  { id: '1', code: '10024', name: '접이식 논슬립 빨래건조대', category: '주방용품', price: '29900', link: 'https://example.com/aff/10024', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10024', baseViews: '1.2만', ranking: '1' },
-  { id: '2', code: '10025', name: '무선 핸디 블렌더 3세대', category: '주방용품', price: '45900', link: 'https://example.com/aff/10025', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10025', baseViews: '8천', ranking: '2' },
-  { id: '3', code: '10026', name: '초경량 항공점퍼 바람막이', category: '생활잡화', price: '39800', link: 'https://example.com/aff/10026', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10026', baseViews: '4.2만', ranking: '3' },
-  { id: '4', code: '10027', name: '스테인리스 진공 텀블러 750ml', category: '생활잡화', price: '18900', link: 'https://example.com/aff/10027', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10027', baseViews: '1.9만', ranking: '4' },
-  { id: '5', code: '10028', name: '프리미엄 두피 스케일러 브러시', category: '뷰티', price: '12900', link: 'https://example.com/aff/10028', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10028', baseViews: '6천', ranking: '5' },
-  { id: '6', code: '10029', name: '고밀도 메모리폼 경추 베개', category: '생활잡화', price: '34900', link: 'https://example.com/aff/10029', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10029', baseViews: '3.7만', ranking: '' },
+  { id: '1', code: '10024', name: '무선 야채 다지기', category: '주방용품', price: '23900', link: 'https://example.com/aff/10024', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10024' },
+  { id: '2', code: '10025', name: '규조토 발매트', category: '생활잡화', price: '15900', link: 'https://example.com/aff/10025', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10025' },
+  { id: '3', code: '10026', name: '접이식 논슬립 빨래건조대', category: '생활잡화', price: '29900', link: 'https://example.com/aff/10026', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10026' },
+  { id: '4', code: '10027', name: '무선 핸디 블렌더 3세대', category: '주방용품', price: '45900', link: 'https://example.com/aff/10027', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10027' },
+  { id: '5', code: '10028', name: '프리미엄 두피 스케일러 브러시', category: '뷰티', price: '12900', link: 'https://example.com/aff/10028', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10028' },
+  { id: '6', code: '10029', name: '초경량 항공점퍼 바람막이', category: '생활잡화', price: '39800', link: 'https://example.com/aff/10029', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10029' },
+  { id: '7', code: '10030', name: '고밀도 메모리폼 경추 베개', category: '생활잡화', price: '34900', link: 'https://example.com/aff/10030', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10030' },
+  { id: '8', code: '10031', name: '스테인리스 진공 텀블러 750ml', category: '주방용품', price: '18900', link: 'https://example.com/aff/10031', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10031' },
 ]
 
 const DUMMY_SETTINGS = [
@@ -82,11 +85,11 @@ function SkeletonGrid() {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 랭킹 카드 (가로 스크롤용, 세로 3:4)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function RankingCard({ product, rank }) {
+function RankingCard({ product, rank, onClickProduct }) {
   const isTop3 = rank <= 3
   return (
     <button
-      onClick={() => { window.location.href = product.link }}
+      onClick={() => onClickProduct(product)}
       className="shrink-0 w-36 text-left group"
     >
       <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-gray-100">
@@ -108,6 +111,10 @@ function RankingCard({ product, rank }) {
       <p className="mt-2 text-[13px] font-medium text-gray-900 truncate tracking-tight">
         {product.name}
       </p>
+      <span className="flex items-center gap-0.5 text-xs text-gray-400 mt-0.5">
+        <Eye className="w-3 h-3" />
+        {Number(product.views).toLocaleString()}
+      </span>
     </button>
   )
 }
@@ -115,10 +122,10 @@ function RankingCard({ product, rank }) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 일반 상품 카드
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function ProductCard({ product }) {
+function ProductCard({ product, onClickProduct }) {
   return (
     <button
-      onClick={() => { window.location.href = product.link }}
+      onClick={() => onClickProduct(product)}
       className="text-left w-full group"
     >
       <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100">
@@ -138,12 +145,10 @@ function ProductCard({ product }) {
         </p>
         <div className="mt-0.5 flex items-center gap-1.5">
           <span className="text-xs text-gray-400">{product.category}</span>
-          {product.baseViews && (
-            <span className="flex items-center gap-0.5 text-xs text-gray-400">
-              <Eye className="w-3 h-3" />
-              {product.baseViews}
-            </span>
-          )}
+          <span className="flex items-center gap-0.5 text-xs text-gray-400">
+            <Eye className="w-3 h-3" />
+            {Number(product.views).toLocaleString()}
+          </span>
         </div>
         {product.price && (
           <p className="mt-0.5 text-[13px] font-bold text-gray-900 tracking-tight">
@@ -159,25 +164,45 @@ function ProductCard({ product }) {
 // 메인 페이지
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export default function Home() {
-  const [products, setProducts] = useState(DUMMY_PRODUCTS)
+  const [products, setProducts] = useState(DUMMY_PRODUCTS.map((p) => ({ ...p, views: 0 })))
   const [settings, setSettings] = useState(DUMMY_SETTINGS)
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [visibleCounts, setVisibleCounts] = useState({})
   const [activeTab, setActiveTab] = useState(undefined)
 
-  // ── Google Sheets CSV 로드 ────────────────────────
+  // ── 구글 시트 CSV + Supabase views 병합 로드 ──────
   useEffect(() => {
     let cancelled = false
 
     async function load() {
-      const [csvProducts, csvSettings] = await Promise.all([
+      // 1) 구글 시트 CSV + Supabase views 동시 로드
+      const [csvProducts, csvSettings, viewsResult] = await Promise.all([
         fetchCSV(PRODUCTS_CSV_URL),
         fetchCSV(SETTINGS_CSV_URL),
+        supabase.from('views').select('*'),
       ])
       if (cancelled) return
-      if (csvProducts?.length) setProducts(csvProducts)
+
+      // 2) 시트 데이터 (실패 시 더미 폴백)
+      const sheetProducts = csvProducts?.length ? csvProducts : DUMMY_PRODUCTS
       if (csvSettings?.length) setSettings(csvSettings)
+
+      // 3) Supabase views를 code 기준 Map으로 변환
+      const viewsMap = new Map()
+      if (viewsResult.data) {
+        for (const row of viewsResult.data) {
+          viewsMap.set(String(row.code), row.views ?? 0)
+        }
+      }
+
+      // 4) 병합: 시트 상품 + Supabase 조회수
+      const merged = sheetProducts.map((p) => ({
+        ...p,
+        views: viewsMap.get(String(p.code)) ?? 0,
+      }))
+
+      setProducts(merged)
       setLoading(false)
     }
 
@@ -195,12 +220,9 @@ export default function Home() {
     [settings]
   )
 
-  // ranking 필터 + 오름차순 정렬
-  const rankingProducts = useMemo(
-    () =>
-      products
-        .filter((p) => p.ranking && parseInt(p.ranking, 10) >= 1 && parseInt(p.ranking, 10) <= 10)
-        .sort((a, b) => parseInt(a.ranking, 10) - parseInt(b.ranking, 10)),
+  // views 높은 순 TOP 10
+  const topProducts = useMemo(
+    () => [...products].sort((a, b) => (b.views ?? 0) - (a.views ?? 0)).slice(0, 10),
     [products]
   )
 
@@ -232,6 +254,13 @@ export default function Home() {
     }))
   }, [])
 
+  // ── 상품 클릭: 조회수 증가 + 이동 ─────────────────
+  const handleClickProduct = useCallback(async (product) => {
+    // fire-and-forget: RPC 호출 후 바로 이동
+    supabase.rpc('increment_view', { product_code: String(product.code) })
+    window.location.href = product.link
+  }, [])
+
   // ── 코드 검색 ──────────────────────────────────────
   const handleSearch = (e) => {
     e.preventDefault()
@@ -241,7 +270,7 @@ export default function Home() {
     const found = products.find((p) => p.code === trimmed)
 
     if (found) {
-      window.location.href = found.link
+      handleClickProduct(found)
     } else {
       alert('존재하지 않는 코드입니다. 관련 기획전으로 이동합니다.')
       window.location.href = fallbackUrl
@@ -323,18 +352,19 @@ export default function Home() {
         {!loading && (
           <>
             {/* ─ Section 1: 실시간 급상승 TOP 10 ─ */}
-            {rankingProducts.length > 0 && (
+            {topProducts.length > 0 && (
               <section className="mt-8">
                 <h2 className="text-lg font-bold text-gray-900 px-0.5">
                   🔥 실시간 급상승 TOP 10
                 </h2>
 
                 <div className="mt-3 -mx-5 px-5 flex gap-3 overflow-x-auto scrollbar-hide pb-1">
-                  {rankingProducts.map((p) => (
+                  {topProducts.map((p, i) => (
                     <RankingCard
                       key={p.code}
                       product={p}
-                      rank={parseInt(p.ranking, 10)}
+                      rank={i + 1}
+                      onClickProduct={handleClickProduct}
                     />
                   ))}
                 </div>
@@ -360,7 +390,7 @@ export default function Home() {
                   ))}
                 </div>
 
-                {/* ─ Section 3: 상품 그리드 (active 탭) ─ */}
+                {/* ─ 상품 그리드 (active 탭) ─ */}
                 {effectiveTab && (() => {
                   const filtered = products.filter((p) => p.category === effectiveTab)
                   const visible = getVisible(effectiveTab)
@@ -369,7 +399,7 @@ export default function Home() {
                     <div className="mt-5">
                       <div className="grid grid-cols-2 gap-3">
                         {filtered.slice(0, visible).map((p) => (
-                          <ProductCard key={p.code} product={p} />
+                          <ProductCard key={p.code} product={p} onClickProduct={handleClickProduct} />
                         ))}
                       </div>
 
