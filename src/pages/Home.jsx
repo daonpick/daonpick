@@ -11,6 +11,21 @@ const PRODUCTS_CSV_URL =
 const SETTINGS_CSV_URL =
   'https://docs.google.com/spreadsheets/d/e/2PACX-1vSiix1Lxl3nmpURsLENJdkZexya5dfVBPwElybHj7goPEWmYQYYCm7fftJSt0dVPkhDMgLbpMJ4b_rg/pub?output=csv'
 
+// 파일 최상단(import 아래)에 이 계산기를 딱 한 번만 배치합니다.
+const formatViewCount = (realCount, code) => {
+  const views = Number(realCount) || 0;
+  const productCode = Number(code) || 0;
+  
+  // 실제 조회수가 0이어도 최소 10~99 사이의 숫자가 나오게 함
+  const seed = (productCode % 90) + 10; 
+  const fakeNum = (views * 100) + seed;
+
+  if (fakeNum < 1000) return fakeNum.toLocaleString();
+  if (fakeNum < 10000) return (fakeNum / 1000).toFixed(1) + '천';
+  if (fakeNum < 1000000) return (fakeNum / 10000).toFixed(1) + '만';
+  return Math.floor(fakeNum / 10000).toLocaleString() + '만';
+};
+  
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 더미 데이터 (CSV 로드 실패 시 폴백)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -273,23 +288,19 @@ export default function Home() {
   }, [])
 
 // ── 상품 클릭: GA4 추적 + 조회수 증가 + 이동 ─────────────────
-  const handleClickProduct = useCallback(async (product) => {
-    // 1. [추가] 구글 애널리틱스(GA4) 데이터 전송
+const handleClickProduct = useCallback(async (product) => {
+    // 1. GA4 전송
     if (window.gtag) {
-      window.gtag('event', 'click_product', {
-        'event_category': 'Outbound Link',
-        'event_label': product.name, // 상품 이름
-        'product_code': String(product.code), // 상품 코드
-        'value': 1
-      });
+      window.gtag('event', 'click_product', { 'event_label': product.name, 'product_code': String(product.code) });
     }
 
-    // 2. 기존 로직: Supabase 조회수 증가 (fire-and-forget)
+    // 2. Supabase 조회수 증가 (await를 붙여서 완료될 때까지 기다림)
     if (supabase) {
-      supabase.rpc('increment_view', { product_code: String(product.code) });
+      // rpc 호출이 완료될 때까지 기다립니다.
+      await supabase.rpc('increment_view', { product_code: String(product.code) });
     }
 
-    // 3. 기존 로직: 링크 이동
+    // 3. 기록 완료 후 링크 이동
     window.location.href = product.link;
   }, []);
 
