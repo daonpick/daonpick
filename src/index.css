@@ -11,3 +11,11 @@
   42% { transform: scale(1.04); }
   56% { transform: scale(1); }
 }
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

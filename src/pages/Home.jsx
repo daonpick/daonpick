@@ -321,7 +321,7 @@ export default function Home() {
 
         {/* ── Horizontal Nav ── */}
         {navButtons.length > 0 && (
-          <div className="mt-5 -mx-5 px-5 flex gap-2 overflow-x-auto scrollbar-hide">
+          <div className="mt-5 -mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar">
             {navButtons.map((btn) => (
               <button
                 key={btn.label}
@@ -358,7 +358,7 @@ export default function Home() {
                   🔥 실시간 급상승 TOP 10
                 </h2>
 
-                <div className="mt-3 -mx-5 px-5 flex gap-3 overflow-x-auto scrollbar-hide pb-1">
+                <div className="mt-3 -mx-5 px-5 flex gap-3 overflow-x-auto no-scrollbar pb-1">
                   {topProducts.map((p, i) => (
                     <RankingCard
                       key={p.code}
@@ -374,7 +374,7 @@ export default function Home() {
             {/* ─ Section 2: 카테고리 탭 ─ */}
             {categories.length > 0 && (
               <section className="mt-10">
-                <div className="-mx-5 px-5 flex gap-2 overflow-x-auto scrollbar-hide">
+                <div className="-mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar">
                   {categories.map((cat) => (
                     <button
                       key={cat}
