@@ -113,7 +113,7 @@ function RankingCard({ product, rank, onClickProduct }) {
       </p>
       <span className="flex items-center gap-0.5 text-xs text-gray-400 mt-0.5">
         <Eye className="w-3 h-3" />
-        {Number(product.views).toLocaleString()}
+        {formatViewCount(product.views, product.code)}
       </span>
     </button>
   )
@@ -147,7 +147,7 @@ function ProductCard({ product, onClickProduct }) {
           <span className="text-xs text-gray-400">{product.category}</span>
           <span className="flex items-center gap-0.5 text-xs text-gray-400">
             <Eye className="w-3 h-3" />
-            {Number(product.views).toLocaleString()}
+            {formatViewCount(product.views, product.code)}
           </span>
         </div>
         {product.price && (
@@ -163,6 +163,24 @@ function ProductCard({ product, onClickProduct }) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 메인 페이지
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 조회수 뻥튀기 및 단위 변환 함수
+const formatViewCount = (realCount, code) => {
+  // 1. 실제 조회수에 상품 코드의 끝 두자리를 조합해 '고정된 랜덤감'을 줌
+  // 만약 실제 조수가 2이고 코드가 10024라면 -> 248 (끝자리 24 * 2) 이런 식
+  const seed = (Number(code) % 90) + 10; // 10~99 사이의 고정 숫자 생성
+  const fakeNum = (Number(realCount) * 100) + seed;
+
+  // 2. 단위 변환 로직
+  if (fakeNum < 1000) {
+    return fakeNum.toLocaleString(); // 0~999: 숫자 그대로 (예: 248)
+  } else if (fakeNum < 10000) {
+    return (fakeNum / 1000).toFixed(1) + '천'; // 1000~9999: 1.3천
+  } else if (fakeNum < 1000000) {
+    return (fakeNum / 10000).toFixed(1) + '만'; // 1만~99만: 1.4만, 23.3만
+  } else {
+    return Math.floor(fakeNum / 10000).toLocaleString() + '만'; // 100만 이상: 142만, 1848만
+  }
+};
 export default function Home() {
   const [products, setProducts] = useState(DUMMY_PRODUCTS.map((p) => ({ ...p, views: 0 })))
   const [settings, setSettings] = useState(DUMMY_SETTINGS)
