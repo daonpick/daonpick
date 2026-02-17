@@ -247,6 +247,7 @@ export default function Home() {
 
   const { addRecentView } = useStore()
   const { ref: rankingRef, canScrollLeft, canScrollRight, scrollDir, isDragged, onMouseDown: onRankingMouseDown } = useHorizontalScroll()
+  const { ref: categoryRef, onMouseDown: onCategoryMouseDown } = useHorizontalScroll()
 
   // ── 타이핑 플레이스홀더 ─────────────────────────────
   const PLACEHOLDER_PHRASES = useMemo(() => [
@@ -476,7 +477,7 @@ export default function Home() {
             {/* Category Grid */}
             {categories.length > 0 && (
               <section className="mt-12">
-                <div className="-mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar">
+                <div ref={categoryRef} onMouseDown={onCategoryMouseDown} className="-mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar select-none cursor-grab active:cursor-grabbing">
                   {categories.map((cat) => (
                     <button key={cat} onClick={() => setActiveTab(cat)}
                             className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-colors ${effectiveTab === cat ? 'bg-gradient-to-r from-[#F37021] to-[#FF8F50] text-white' : 'bg-gray-100 text-gray-500'}`}>
