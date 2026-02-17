@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import Papa from 'papaparse'
 import { Search, Eye, ChevronDown, ArrowRight, Menu, Heart } from 'lucide-react'
 import { supabase } from '../supabaseClient'
@@ -168,8 +168,51 @@ export default function Home() {
   const [visibleCounts, setVisibleCounts] = useState({})
   const [activeTab, setActiveTab] = useState(undefined)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [inputFocused, setInputFocused] = useState(false)
+  const [typedText, setTypedText] = useState('')
 
   const { addRecentView } = useStore()
+
+  // ── 타이핑 플레이스홀더 ─────────────────────────────
+  const PLACEHOLDER_PHRASES = useMemo(() => [
+    '찾으시는 상품 번호가 있나요?',
+    '상품번호를 입력해주세요',
+    '영상 속 그 제품, 번호로 검색!',
+    '번호만 입력하면 바로 확인!',
+  ], [])
+
+  useEffect(() => {
+    if (inputFocused || query) return
+    let phraseIdx = 0
+    let charIdx = 0
+    let deleting = false
+    let timer
+
+    const tick = () => {
+      const phrase = PLACEHOLDER_PHRASES[phraseIdx]
+      if (!deleting) {
+        charIdx++
+        setTypedText(phrase.slice(0, charIdx))
+        if (charIdx === phrase.length) {
+          timer = setTimeout(() => { deleting = true; tick() }, 1500)
+          return
+        }
+        timer = setTimeout(tick, 80)
+      } else {
+        charIdx--
+        setTypedText(phrase.slice(0, charIdx))
+        if (charIdx === 0) {
+          deleting = false
+          phraseIdx = (phraseIdx + 1) % PLACEHOLDER_PHRASES.length
+          timer = setTimeout(tick, 400)
+          return
+        }
+        timer = setTimeout(tick, 40)
+      }
+    }
+    tick()
+    return () => clearTimeout(timer)
+  }, [inputFocused, query, PLACEHOLDER_PHRASES])
 
   // ── 데이터 로드 ────────────────────────────────────
   useEffect(() => {
@@ -296,8 +339,14 @@ export default function Home() {
 
         {/* Search */}
         <form onSubmit={handleSearch} className="mt-6 relative">
-          <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="상품번호 입력"
-                 className="w-full h-12 pl-5 pr-14 rounded-2xl bg-white text-[14px] text-gray-900 placeholder-gray-300 outline-none shadow-lg border-0 transition focus:shadow-xl" />
+          <input type="text" value={query} onChange={(e) => setQuery(e.target.value)}
+                 onFocus={() => setInputFocused(true)} onBlur={() => setInputFocused(false)}
+                 className="w-full h-12 pl-5 pr-14 rounded-2xl bg-white text-[14px] text-gray-900 outline-none shadow-lg border-0 transition focus:shadow-xl" />
+          {!query && !inputFocused && (
+            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-[14px] text-gray-300 pointer-events-none">
+              {typedText}<span className="inline-block w-[2px] h-[16px] bg-gray-300 align-middle ml-0.5 animate-pulse" />
+            </span>
+          )}
           <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl bg-gradient-to-r from-[#F37021] to-[#FF8F50] text-white flex items-center justify-center active:scale-90 transition-transform">
             <Search className="w-4 h-4" />
           </button>
