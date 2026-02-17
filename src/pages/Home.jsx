@@ -211,6 +211,11 @@ function ProductCard({ product, onClickProduct }) {
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
         <div className="relative aspect-square overflow-hidden bg-gray-100">
           <img src={product.image} alt={product.name} className="w-full h-full object-cover group-active:scale-[0.96] transition-transform" />
+          {product.code && (
+            <div className="absolute top-0 left-0 bg-[#191F28]/80 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1.5 rounded-br-xl z-10">
+              {product.code}
+            </div>
+          )}
           <div className="absolute top-2 right-2" onClick={(e) => { e.stopPropagation(); toggleWishlist(product) }}>
             <Heart className={`w-5 h-5 drop-shadow-lg transition-colors ${wishlisted ? 'text-red-500 fill-red-500' : 'text-white/70'}`} />
           </div>
