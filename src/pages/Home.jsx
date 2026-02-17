@@ -6,6 +6,62 @@ import { useStore } from '../store/useStore'
 import Sidebar from '../components/Sidebar'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 0. PC 가로 스크롤 훅 (드래그 + 마우스 휠)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function useDragScroll() {
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    let isDown = false
+    let startX = 0
+    let scrollStart = 0
+
+    const onMouseDown = (e) => {
+      isDown = true
+      el.style.cursor = 'grabbing'
+      startX = e.pageX - el.offsetLeft
+      scrollStart = el.scrollLeft
+    }
+    const onMouseUp = () => {
+      isDown = false
+      el.style.cursor = 'grab'
+    }
+    const onMouseMove = (e) => {
+      if (!isDown) return
+      e.preventDefault()
+      const x = e.pageX - el.offsetLeft
+      el.scrollLeft = scrollStart - (x - startX)
+    }
+    const onWheel = (e) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        e.preventDefault()
+        el.scrollLeft += e.deltaY
+      }
+    }
+
+    el.style.cursor = 'grab'
+    el.addEventListener('mousedown', onMouseDown)
+    el.addEventListener('mouseleave', onMouseUp)
+    el.addEventListener('mouseup', onMouseUp)
+    el.addEventListener('mousemove', onMouseMove)
+    el.addEventListener('wheel', onWheel, { passive: false })
+
+    return () => {
+      el.removeEventListener('mousedown', onMouseDown)
+      el.removeEventListener('mouseleave', onMouseUp)
+      el.removeEventListener('mouseup', onMouseUp)
+      el.removeEventListener('mousemove', onMouseMove)
+      el.removeEventListener('wheel', onWheel)
+    }
+  }, [])
+
+  return ref
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 1. 설정 및 헬퍼 함수
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const PRODUCTS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSje1PMCjbJe528NHFMP4X5OEauML49AaRVb2sHUhJDfe3JwBub6raAxk4Zg-D-km2Cugw4xTy9E4cA/pub?output=csv'
@@ -172,6 +228,7 @@ export default function Home() {
   const [typedText, setTypedText] = useState('')
 
   const { addRecentView } = useStore()
+  const rankingScrollRef = useDragScroll()
 
   // ── 타이핑 플레이스홀더 ─────────────────────────────
   const PLACEHOLDER_PHRASES = useMemo(() => [
@@ -378,7 +435,7 @@ export default function Home() {
             {topProducts.length > 0 && (
               <section className="mt-10">
                 <h2 className="text-lg font-bold text-gray-900 px-0.5 mb-4">🔥 실시간 급상승 TOP 10</h2>
-                <div className="-mx-5 px-5 flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar pb-1">
+                <div ref={rankingScrollRef} className="-mx-5 px-5 flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar pb-1 select-none">
                   {topProducts.map((p, i) => (
                     <RankingCard key={p.code} product={p} rank={i + 1} onClickProduct={handleClickProduct} badge={i < 3 ? badges[i] : null} />
                   ))}
