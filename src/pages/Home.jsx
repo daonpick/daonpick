@@ -47,16 +47,18 @@ function useHorizontalScroll() {
 
     // 드래그 (mousedown on container, mousemove/mouseup on document)
     const onMouseDown = (e) => {
-      // 화살표 버튼 등 다른 interactive 요소 클릭 시 무시
       if (e.button !== 0) return
+      e.preventDefault() // 브라우저 기본 드래그(텍스트 선택, 이미지 드래그) 방지
       drag.current = { active: true, startX: e.clientX, sl: el.scrollLeft, moved: false }
       el.style.cursor = 'grabbing'
+      el.style.userSelect = 'none'
     }
 
     const onMouseMove = (e) => {
       if (!drag.current.active) return
+      e.preventDefault()
       const dx = e.clientX - drag.current.startX
-      if (Math.abs(dx) > 5) drag.current.moved = true
+      if (Math.abs(dx) > 3) drag.current.moved = true
       el.scrollLeft = drag.current.sl - dx
     }
 
@@ -64,7 +66,7 @@ function useHorizontalScroll() {
       if (!drag.current.active) return
       drag.current.active = false
       el.style.cursor = ''
-      // moved 플래그는 카드 onClick에서 체크 후 리셋
+      el.style.userSelect = ''
       setTimeout(() => { drag.current.moved = false }, 0)
     }
 
