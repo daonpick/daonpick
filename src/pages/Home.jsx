@@ -6,53 +6,74 @@ import { useStore } from '../store/useStore'
 import Sidebar from '../components/Sidebar'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 0. 가로 스크롤 (화살표 버튼 + 휠)
+// 0. 가로 스크롤 (화살표 + 드래그 + 휠)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function useHorizontalScroll() {
   const ref = useRef(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
+  const drag = useRef({ active: false, startX: 0, sl: 0 })
 
-  const checkScroll = useCallback(() => {
+  const check = useCallback(() => {
     const el = ref.current
     if (!el) return
-    setCanScrollLeft(el.scrollLeft > 0)
+    setCanScrollLeft(el.scrollLeft > 1)
     setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 1)
   }, [])
 
-  const scrollBy = useCallback((dir) => {
+  const scrollDir = useCallback((dir) => {
     const el = ref.current
     if (!el) return
-    el.scrollBy({ left: dir * 180, behavior: 'smooth' })
+    const target = el.scrollLeft + dir * 180
+    el.scrollTo({ left: target, behavior: 'smooth' })
   }, [])
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
 
-    checkScroll()
-    el.addEventListener('scroll', checkScroll, { passive: true })
+    check()
+    el.addEventListener('scroll', check, { passive: true })
 
+    // 휠
     const onWheel = (e) => {
       if (el.scrollWidth <= el.clientWidth) return
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-        e.preventDefault()
-        el.scrollBy({ left: e.deltaY, behavior: 'auto' })
-      }
+      e.preventDefault()
+      el.scrollLeft += (e.deltaY || e.deltaX)
     }
-    el.addEventListener('wheel', onWheel, { passive: false })
 
-    const ro = new ResizeObserver(checkScroll)
-    ro.observe(el)
+    // 드래그
+    const onPointerDown = (e) => {
+      drag.current = { active: true, startX: e.clientX, sl: el.scrollLeft }
+      el.setPointerCapture(e.pointerId)
+    }
+    const onPointerMove = (e) => {
+      if (!drag.current.active) return
+      e.preventDefault()
+      el.scrollLeft = drag.current.sl - (e.clientX - drag.current.startX)
+    }
+    const onPointerUp = (e) => {
+      drag.current.active = false
+      el.releasePointerCapture(e.pointerId)
+    }
+
+    el.addEventListener('wheel', onWheel, { passive: false })
+    el.addEventListener('pointerdown', onPointerDown)
+    el.addEventListener('pointermove', onPointerMove)
+    el.addEventListener('pointerup', onPointerUp)
+    el.addEventListener('pointercancel', onPointerUp)
 
     return () => {
-      el.removeEventListener('scroll', checkScroll)
+      el.removeEventListener('scroll', check)
       el.removeEventListener('wheel', onWheel)
-      ro.disconnect()
+      el.removeEventListener('pointerdown', onPointerDown)
+      el.removeEventListener('pointermove', onPointerMove)
+      el.removeEventListener('pointerup', onPointerUp)
+      el.removeEventListener('pointercancel', onPointerUp)
     }
-  }, [checkScroll])
+  }, [check])
 
-  return { ref, canScrollLeft, canScrollRight, scrollBy }
+  return { ref, canScrollLeft, canScrollRight, scrollDir }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -152,9 +173,9 @@ function RankingCard({ product, rank, onClickProduct, badge }) {
   const wishlisted = isWishlisted(product.code)
 
   return (
-    <button onClick={() => onClickProduct(product)} className="shrink-0 w-40 snap-start text-left group">
+    <div onClick={() => onClickProduct(product)} className="shrink-0 w-40 text-left group cursor-pointer">
       <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-sm">
-        <img src={product.image} alt={product.name} className="w-full h-full object-cover group-active:scale-[0.96] transition-transform" />
+        <img src={product.image} alt={product.name} draggable={false} className="w-full h-full object-cover group-active:scale-[0.96] transition-transform pointer-events-none" />
         {badge && (
           <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-white/90 backdrop-blur text-[#F37021] font-bold text-[10px]">
             {badge}
@@ -174,7 +195,7 @@ function RankingCard({ product, rank, onClickProduct, badge }) {
           <Eye className="w-3 h-3" /> {formatViewCount(product.views, product.code)}
         </span>
       </div>
-    </button>
+    </div>
   )
 }
 
@@ -431,17 +452,17 @@ export default function Home() {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold text-gray-900 px-0.5">🔥 실시간 급상승 TOP 10</h2>
                   <div className="flex gap-1">
-                    <button onClick={() => ranking.scrollBy(-1)} disabled={!ranking.canScrollLeft}
+                    <button type="button" onClick={() => ranking.scrollDir(-1)}
                             className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${ranking.canScrollLeft ? 'bg-gray-200 text-gray-600 active:bg-gray-300' : 'bg-gray-100 text-gray-300'}`}>
                       <ChevronLeft className="w-4 h-4" />
                     </button>
-                    <button onClick={() => ranking.scrollBy(1)} disabled={!ranking.canScrollRight}
+                    <button type="button" onClick={() => ranking.scrollDir(1)}
                             className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${ranking.canScrollRight ? 'bg-gray-200 text-gray-600 active:bg-gray-300' : 'bg-gray-100 text-gray-300'}`}>
                       <ChevronRight className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
-                <div ref={ranking.ref} className="-mx-5 px-5 flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar pb-1">
+                <div ref={ranking.ref} className="-mx-5 px-5 flex gap-3 overflow-x-auto no-scrollbar pb-1 select-none" style={{ touchAction: 'pan-y' }}>
                   {topProducts.map((p, i) => (
                     <RankingCard key={p.code} product={p} rank={i + 1} onClickProduct={handleClickProduct} badge={i < 3 ? badges[i] : null} />
                   ))}
