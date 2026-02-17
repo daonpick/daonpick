@@ -254,12 +254,26 @@ export default function Home() {
     }))
   }, [])
 
-  // ── 상품 클릭: 조회수 증가 + 이동 ─────────────────
+// ── 상품 클릭: GA4 추적 + 조회수 증가 + 이동 ─────────────────
   const handleClickProduct = useCallback(async (product) => {
-    // fire-and-forget: RPC 호출 후 바로 이동
-    if (supabase) supabase.rpc('increment_view', { product_code: String(product.code) })
-    window.location.href = product.link
-  }, [])
+    // 1. [추가] 구글 애널리틱스(GA4) 데이터 전송
+    if (window.gtag) {
+      window.gtag('event', 'click_product', {
+        'event_category': 'Outbound Link',
+        'event_label': product.name, // 상품 이름
+        'product_code': String(product.code), // 상품 코드
+        'value': 1
+      });
+    }
+
+    // 2. 기존 로직: Supabase 조회수 증가 (fire-and-forget)
+    if (supabase) {
+      supabase.rpc('increment_view', { product_code: String(product.code) });
+    }
+
+    // 3. 기존 로직: 링크 이동
+    window.location.href = product.link;
+  }, []);
 
   // ── 코드 검색 ──────────────────────────────────────
   const handleSearch = (e) => {
