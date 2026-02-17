@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import Papa from 'papaparse'
-import { Search, Eye, ChevronDown } from 'lucide-react'
+import { Search, Eye, ChevronDown, ArrowRight, Menu } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -9,13 +9,10 @@ import { supabase } from '../supabaseClient'
 const PRODUCTS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSje1PMCjbJe528NHFMP4X5OEauML49AaRVb2sHUhJDfe3JwBub6raAxk4Zg-D-km2Cugw4xTy9E4cA/pub?output=csv'
 const SETTINGS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSiix1Lxl3nmpURsLENJdkZexya5dfVBPwElybHj7goPEWmYQYYCm7fftJSt0dVPkhDMgLbpMJ4b_rg/pub?output=csv'
 
-// 조회수 뻥튀기 및 단위 변환 함수 (파일 최상단 배치)
 const formatViewCount = (realCount, code) => {
   const views = Number(realCount) || 0;
   const productCode = Number(code) || 0;
 
-  // 상품 코드 기반 고정 두자리 숫자(10~99)를 실제 조회수 뒤에 붙여서 뻥튀기
-  // 예: 조회수 2 → "248", 조회수 28 → "2877", 조회수 2867 → "286789"
   const suffix = (productCode % 90) + 10;
   const fakeNum = views === 0 ? suffix : Number(String(views) + String(suffix));
 
@@ -24,6 +21,19 @@ const formatViewCount = (realCount, code) => {
   if (fakeNum < 1000000) return (fakeNum / 10000).toFixed(1) + '만';
   return Math.floor(fakeNum / 10000).toLocaleString() + '만';
 };
+
+const BADGE_TEMPLATES = [
+  () => '🔥 실시간 주문 폭주',
+  () => `👁️ ${Math.floor(Math.random() * 301) + 200}명 보고 있음`,
+  () => '📦 재구매율 1위',
+  () => '⚡ 마감 임박',
+  () => '⭐ 만족도 99%',
+  () => '🏆 MD 강력 추천',
+]
+
+const getRandomBadge = () => {
+  return BADGE_TEMPLATES[Math.floor(Math.random() * BADGE_TEMPLATES.length)]()
+}
 
 const fetchCSV = (url) => {
   return new Promise((resolve) => {
@@ -57,7 +67,7 @@ const LOAD_MORE_STEP = 6
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function SkeletonRanking() {
   return (
-    <div className="flex gap-3 overflow-hidden">
+    <div className="flex gap-4 overflow-hidden">
       {Array.from({ length: 3 }).map((_, i) => (
         <div key={i} className="shrink-0 w-36 animate-pulse">
           <div className="aspect-[3/4] rounded-2xl bg-gray-200" />
@@ -70,7 +80,7 @@ function SkeletonRanking() {
 
 function SkeletonGrid() {
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 gap-4">
       {Array.from({ length: 4 }).map((_, i) => (
         <div key={i} className="animate-pulse">
           <div className="aspect-square rounded-2xl bg-gray-200" />
@@ -91,7 +101,7 @@ function RankingCard({ product, rank, onClickProduct }) {
       <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-gray-100">
         <img src={product.image} alt={product.name} className="w-full h-full object-cover group-active:scale-[0.96] transition-transform" />
         <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/60 to-transparent" />
-        <span className={`absolute bottom-1 left-2 text-6xl font-black italic leading-none tracking-tighter ${isTop3 ? 'text-orange-500' : 'text-white/40'}`}
+        <span className={`absolute bottom-1 left-2 text-6xl font-black italic leading-none tracking-tighter ${isTop3 ? 'text-[#F37021]' : 'text-white/40'}`}
               style={{ WebkitTextStroke: isTop3 ? 'none' : '1px rgba(255,255,255,0.5)' }}>
           {rank}
         </span>
@@ -104,28 +114,29 @@ function RankingCard({ product, rank, onClickProduct }) {
   )
 }
 
-function ProductCard({ product, onClickProduct }) {
+function ProductCard({ product, onClickProduct, badge }) {
   return (
     <button onClick={() => onClickProduct(product)} className="text-left w-full group">
-      <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100">
-        <img src={product.image} alt={product.name} className="w-full h-full object-cover group-active:scale-[0.96] transition-transform" />
-        <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-black/70 text-[10px] text-white font-medium backdrop-blur">
-          {product.code}
-        </span>
-      </div>
-      <div className="mt-2 px-0.5">
-        <p className="text-[13px] text-gray-900 font-medium leading-snug truncate tracking-tight">{product.name}</p>
-        <div className="mt-0.5 flex items-center gap-1.5">
-          <span className="text-xs text-gray-400">{product.category}</span>
-          <span className="flex items-center gap-0.5 text-xs text-gray-400">
-            <Eye className="w-3 h-3" /> {formatViewCount(product.views, product.code)}
-          </span>
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="relative aspect-square overflow-hidden bg-gray-100">
+          <img src={product.image} alt={product.name} className="w-full h-full object-cover group-active:scale-[0.96] transition-transform" />
+          {badge && (
+            <span className="absolute top-2 left-2 px-2 py-1 rounded-lg bg-[#F37021]/10 text-[#F37021] font-bold text-xs backdrop-blur-sm">
+              {badge}
+            </span>
+          )}
         </div>
-        {product.price && (
-          <p className="mt-0.5 text-[13px] font-bold text-gray-900 tracking-tight">
-            {Number(product.price).toLocaleString()}원
-          </p>
-        )}
+        <div className="p-3">
+          <p className="text-[14px] font-bold text-[#222] leading-snug truncate tracking-tight">{product.name}</p>
+          <div className="mt-1.5 flex items-center justify-between">
+            <span className="flex items-center gap-1 text-xs text-gray-400">
+              <Eye className="w-3 h-3" /> {formatViewCount(product.views, product.code)}
+            </span>
+            <span className="flex items-center gap-0.5 text-xs font-semibold text-[#F37021]">
+              View <ArrowRight className="w-3.5 h-3.5" />
+            </span>
+          </div>
+        </div>
       </div>
     </button>
   )
@@ -159,7 +170,6 @@ export default function Home() {
       const viewsMap = new Map()
       if (viewsResult.data) {
         for (const row of viewsResult.data) {
-          // [수정 완료] DB의 컬럼명은 'count'입니다. 'views'가 아니라 'count'를 가져와야 합니다.
           viewsMap.set(String(row.code), row.count ?? 0)
         }
       }
@@ -180,7 +190,7 @@ export default function Home() {
   const navButtons = useMemo(() => settings.filter((s) => s.type === 'button'), [settings])
   const fallbackUrl = useMemo(() => settings.find((s) => s.type === 'fallback')?.url || '#', [settings])
   const topProducts = useMemo(() => [...products].sort((a, b) => (b.views ?? 0) - (a.views ?? 0)).slice(0, 10), [products])
-  
+
   const categories = useMemo(() => {
     const seen = new Set(); const list = []
     for (const p of products) {
@@ -196,6 +206,9 @@ export default function Home() {
   const handleLoadMore = useCallback((key) => {
     setVisibleCounts((prev) => ({ ...prev, [key]: (prev[key] ?? INITIAL_COUNT) + LOAD_MORE_STEP }))
   }, [])
+
+  // ── TOP3 뱃지 (새로고침 시 랜덤) ──────────────────
+  const badges = useMemo(() => [getRandomBadge(), getRandomBadge(), getRandomBadge()], [])
 
   // ── 클릭 핸들러 (GA4 + Supabase Await + 이동) ──────
   const handleClickProduct = useCallback(async (product) => {
@@ -242,7 +255,7 @@ export default function Home() {
 
   // ── 렌더링 ─────────────────────────────────────────
   return (
-    <div className="flex flex-col items-center min-h-screen bg-[#F9F9F9] tracking-tight">
+    <div className="flex flex-col items-center min-h-screen bg-[#FAFAFA] tracking-tight">
       <div className="sticky top-0 z-50 w-full bg-gray-800">
         <p className="max-w-[480px] mx-auto px-4 py-1.5 text-[10px] text-gray-400 text-center leading-relaxed">
           이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
@@ -250,21 +263,27 @@ export default function Home() {
       </div>
 
       <div className="w-full max-w-[480px] px-5 pb-16">
-        <div className="pt-7 pb-1 flex items-baseline justify-between">
+        {/* Header */}
+        <div className="pt-7 pb-1 flex items-center justify-between">
           <h1 className="text-2xl font-black tracking-tighter">
-            <span className="text-orange-500">DAON</span><span className="text-gray-900"> PICK</span>
+            <span className="text-[#F37021]">DAON</span><span className="text-gray-900"> PICK</span>
           </h1>
+          <button className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 active:bg-gray-100 transition-colors">
+            <Menu className="w-5 h-5" />
+          </button>
         </div>
         <p className="text-[13px] text-gray-400">영상 속 그 제품, 번호만 입력하세요</p>
 
-        <form onSubmit={handleSearch} className="mt-5 relative">
+        {/* Search */}
+        <form onSubmit={handleSearch} className="mt-6 relative">
           <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="상품번호 입력"
                  className="w-full h-12 pl-5 pr-14 rounded-2xl bg-white text-[14px] text-gray-900 placeholder-gray-300 outline-none shadow-lg border-0 transition focus:shadow-xl" />
-          <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl bg-orange-500 text-white flex items-center justify-center active:scale-90 transition-transform">
+          <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl bg-gradient-to-r from-[#F37021] to-[#FF9055] text-white flex items-center justify-center active:scale-90 transition-transform">
             <Search className="w-4 h-4" />
           </button>
         </form>
 
+        {/* Nav Buttons */}
         {navButtons.length > 0 && (
           <div className="mt-5 -mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar">
             {navButtons.map((btn) => (
@@ -276,8 +295,9 @@ export default function Home() {
           </div>
         )}
 
+        {/* Loading Skeleton */}
         {loading && (
-          <div className="mt-8 space-y-8">
+          <div className="mt-10 space-y-10">
             <div><div className="h-5 w-44 rounded bg-gray-200 animate-pulse mb-4" /><SkeletonRanking /></div>
             <div><div className="h-5 w-32 rounded bg-gray-200 animate-pulse mb-4" /><SkeletonGrid /></div>
           </div>
@@ -285,10 +305,11 @@ export default function Home() {
 
         {!loading && (
           <>
+            {/* TOP 10 Ranking */}
             {topProducts.length > 0 && (
-              <section className="mt-8">
+              <section className="mt-10">
                 <h2 className="text-lg font-bold text-gray-900 px-0.5">🔥 실시간 급상승 TOP 10</h2>
-                <div className="mt-3 -mx-5 px-5 flex gap-3 overflow-x-auto no-scrollbar pb-1">
+                <div className="mt-4 -mx-5 px-5 flex gap-4 overflow-x-auto no-scrollbar pb-1">
                   {topProducts.map((p, i) => (
                     <RankingCard key={p.code} product={p} rank={i + 1} onClickProduct={handleClickProduct} />
                   ))}
@@ -296,12 +317,13 @@ export default function Home() {
               </section>
             )}
 
+            {/* Category Grid */}
             {categories.length > 0 && (
-              <section className="mt-10">
+              <section className="mt-12">
                 <div className="-mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar">
                   {categories.map((cat) => (
                     <button key={cat} onClick={() => setActiveTab(cat)}
-                            className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-colors ${effectiveTab === cat ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-colors ${effectiveTab === cat ? 'bg-gradient-to-r from-[#F37021] to-[#FF9055] text-white' : 'bg-gray-100 text-gray-500'}`}>
                       {cat}
                     </button>
                   ))}
@@ -310,15 +332,15 @@ export default function Home() {
                   const filtered = products.filter((p) => p.category === effectiveTab)
                   const visible = getVisible(effectiveTab)
                   return (
-                    <div className="mt-5">
-                      <div className="grid grid-cols-2 gap-3">
-                        {filtered.slice(0, visible).map((p) => (
-                          <ProductCard key={p.code} product={p} onClickProduct={handleClickProduct} />
+                    <div className="mt-6">
+                      <div className="grid grid-cols-2 gap-4">
+                        {filtered.slice(0, visible).map((p, idx) => (
+                          <ProductCard key={p.code} product={p} onClickProduct={handleClickProduct} badge={idx < 3 ? badges[idx] : null} />
                         ))}
                       </div>
                       {visible < filtered.length && (
                         <button onClick={() => handleLoadMore(effectiveTab)}
-                                className="mt-4 w-full py-3 rounded-2xl bg-white text-[14px] font-medium text-gray-500 flex items-center justify-center gap-1 active:scale-[0.98] transition-transform shadow-sm">
+                                className="mt-6 w-full py-3 rounded-2xl bg-white text-[14px] font-semibold text-[#F37021] flex items-center justify-center gap-1 active:scale-[0.98] transition-transform shadow-sm">
                           더보기 <ChevronDown className="w-4 h-4" />
                         </button>
                       )}
