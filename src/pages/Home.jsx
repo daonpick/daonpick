@@ -10,53 +10,59 @@ import Sidebar from '../components/Sidebar'
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function useDragScroll() {
   const ref = useRef(null)
+  const state = useRef({ isDown: false, startX: 0, scrollLeft: 0, moved: false })
+
+  const onMouseDown = useCallback((e) => {
+    const el = ref.current
+    if (!el) return
+    state.current = { isDown: true, startX: e.clientX, scrollLeft: el.scrollLeft, moved: false }
+    el.style.cursor = 'grabbing'
+    el.style.scrollSnapType = 'none'
+  }, [])
+
+  const onMouseUp = useCallback(() => {
+    const el = ref.current
+    if (!el) return
+    state.current.isDown = false
+    el.style.cursor = 'grab'
+    el.style.scrollSnapType = ''
+  }, [])
+
+  const onMouseMove = useCallback((e) => {
+    if (!state.current.isDown) return
+    e.preventDefault()
+    const dx = e.clientX - state.current.startX
+    if (Math.abs(dx) > 3) state.current.moved = true
+    ref.current.scrollLeft = state.current.scrollLeft - dx
+  }, [])
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
 
-    let isDown = false
-    let startX = 0
-    let scrollStart = 0
-
-    const onMouseDown = (e) => {
-      isDown = true
-      el.style.cursor = 'grabbing'
-      startX = e.pageX - el.offsetLeft
-      scrollStart = el.scrollLeft
-    }
-    const onMouseUp = () => {
-      isDown = false
-      el.style.cursor = 'grab'
-    }
-    const onMouseMove = (e) => {
-      if (!isDown) return
-      e.preventDefault()
-      const x = e.pageX - el.offsetLeft
-      el.scrollLeft = scrollStart - (x - startX)
-    }
-    const onWheel = (e) => {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-        e.preventDefault()
-        el.scrollLeft += e.deltaY
-      }
-    }
-
     el.style.cursor = 'grab'
+
+    const onWheel = (e) => {
+      if (el.scrollWidth <= el.clientWidth) return
+      e.preventDefault()
+      el.style.scrollSnapType = 'none'
+      el.scrollLeft += e.deltaY || e.deltaX
+      clearTimeout(el._snapTimer)
+      el._snapTimer = setTimeout(() => { el.style.scrollSnapType = '' }, 100)
+    }
+
     el.addEventListener('mousedown', onMouseDown)
-    el.addEventListener('mouseleave', onMouseUp)
-    el.addEventListener('mouseup', onMouseUp)
-    el.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+    document.addEventListener('mousemove', onMouseMove)
     el.addEventListener('wheel', onWheel, { passive: false })
 
     return () => {
       el.removeEventListener('mousedown', onMouseDown)
-      el.removeEventListener('mouseleave', onMouseUp)
-      el.removeEventListener('mouseup', onMouseUp)
-      el.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+      document.removeEventListener('mousemove', onMouseMove)
       el.removeEventListener('wheel', onWheel)
     }
-  }, [])
+  }, [onMouseDown, onMouseUp, onMouseMove])
 
   return ref
 }
