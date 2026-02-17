@@ -114,7 +114,7 @@ function RankingCard({ product, rank, onClickProduct, badge }) {
           <Heart className={`w-5 h-5 drop-shadow-lg transition-colors ${wishlisted ? 'text-red-500 fill-red-500' : 'text-white/80'}`} />
         </div>
         <span className="absolute bottom-1 left-2 text-6xl font-black italic leading-none tracking-tighter text-[#F37021]"
-              style={{ WebkitTextStroke: '2px white', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.25))' }}>
+              style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.2))' }}>
           {rank}
         </span>
       </div>
