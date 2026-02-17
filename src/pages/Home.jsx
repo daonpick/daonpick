@@ -248,6 +248,7 @@ export default function Home() {
   const { addRecentView } = useStore()
   const { ref: rankingRef, canScrollLeft, canScrollRight, scrollDir, isDragged, onMouseDown: onRankingMouseDown } = useHorizontalScroll()
   const { ref: categoryRef, onMouseDown: onCategoryMouseDown } = useHorizontalScroll()
+  const { ref: navRef, onMouseDown: onNavMouseDown } = useHorizontalScroll()
 
   // ── 타이핑 플레이스홀더 ─────────────────────────────
   const PLACEHOLDER_PHRASES = useMemo(() => [
@@ -430,7 +431,7 @@ export default function Home() {
 
         {/* Nav Buttons */}
         {navButtons.length > 0 && (
-          <div className="mt-5 -mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar">
+          <div ref={navRef} onMouseDown={onNavMouseDown} className="mt-5 -mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar select-none cursor-grab active:cursor-grabbing">
             {navButtons.map((btn) => (
               <button key={btn.label} onClick={() => { window.location.href = btn.url }}
                       className="shrink-0 px-4 py-2 rounded-full bg-gray-100 text-[13px] font-medium text-gray-600 active:scale-95 transition-transform">
