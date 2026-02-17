@@ -12,7 +12,7 @@ function useHorizontalScroll() {
   const ref = useRef(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
-  const drag = useRef({ active: false, startX: 0, sl: 0 })
+  const drag = useRef({ active: false, startX: 0, sl: 0, moved: false })
 
   const check = useCallback(() => {
     const el = ref.current
@@ -24,9 +24,11 @@ function useHorizontalScroll() {
   const scrollDir = useCallback((dir) => {
     const el = ref.current
     if (!el) return
-    const target = el.scrollLeft + dir * 180
-    el.scrollTo({ left: target, behavior: 'smooth' })
+    el.scrollTo({ left: el.scrollLeft + dir * 180, behavior: 'smooth' })
   }, [])
+
+  // 드래그 중이면 카드 클릭 방지용
+  const isDragged = useCallback(() => drag.current.moved, [])
 
   useEffect(() => {
     const el = ref.current
@@ -41,39 +43,45 @@ function useHorizontalScroll() {
       e.preventDefault()
       el.scrollLeft += (e.deltaY || e.deltaX)
     }
-
-    // 드래그
-    const onPointerDown = (e) => {
-      drag.current = { active: true, startX: e.clientX, sl: el.scrollLeft }
-      el.setPointerCapture(e.pointerId)
-    }
-    const onPointerMove = (e) => {
-      if (!drag.current.active) return
-      e.preventDefault()
-      el.scrollLeft = drag.current.sl - (e.clientX - drag.current.startX)
-    }
-    const onPointerUp = (e) => {
-      drag.current.active = false
-      el.releasePointerCapture(e.pointerId)
-    }
-
     el.addEventListener('wheel', onWheel, { passive: false })
-    el.addEventListener('pointerdown', onPointerDown)
-    el.addEventListener('pointermove', onPointerMove)
-    el.addEventListener('pointerup', onPointerUp)
-    el.addEventListener('pointercancel', onPointerUp)
+
+    // 드래그 (mousedown on container, mousemove/mouseup on document)
+    const onMouseDown = (e) => {
+      // 화살표 버튼 등 다른 interactive 요소 클릭 시 무시
+      if (e.button !== 0) return
+      drag.current = { active: true, startX: e.clientX, sl: el.scrollLeft, moved: false }
+      el.style.cursor = 'grabbing'
+    }
+
+    const onMouseMove = (e) => {
+      if (!drag.current.active) return
+      const dx = e.clientX - drag.current.startX
+      if (Math.abs(dx) > 5) drag.current.moved = true
+      el.scrollLeft = drag.current.sl - dx
+    }
+
+    const onMouseUp = () => {
+      if (!drag.current.active) return
+      drag.current.active = false
+      el.style.cursor = ''
+      // moved 플래그는 카드 onClick에서 체크 후 리셋
+      setTimeout(() => { drag.current.moved = false }, 0)
+    }
+
+    el.addEventListener('mousedown', onMouseDown)
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
 
     return () => {
       el.removeEventListener('scroll', check)
       el.removeEventListener('wheel', onWheel)
-      el.removeEventListener('pointerdown', onPointerDown)
-      el.removeEventListener('pointermove', onPointerMove)
-      el.removeEventListener('pointerup', onPointerUp)
-      el.removeEventListener('pointercancel', onPointerUp)
+      el.removeEventListener('mousedown', onMouseDown)
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
     }
   }, [check])
 
-  return { ref, canScrollLeft, canScrollRight, scrollDir }
+  return { ref, canScrollLeft, canScrollRight, scrollDir, isDragged }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -167,13 +175,13 @@ function SkeletonGrid() {
   )
 }
 
-function RankingCard({ product, rank, onClickProduct, badge }) {
+function RankingCard({ product, rank, onClickProduct, badge, isDragged }) {
   const isTop3 = rank <= 3
   const { toggleWishlist, isWishlisted } = useStore()
   const wishlisted = isWishlisted(product.code)
 
   return (
-    <div onClick={() => onClickProduct(product)} className="shrink-0 w-40 text-left group cursor-pointer">
+    <div onClick={() => { if (!isDragged || !isDragged()) onClickProduct(product) }} className="shrink-0 w-40 text-left group cursor-pointer">
       <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-sm">
         <img src={product.image} alt={product.name} draggable={false} className="w-full h-full object-cover group-active:scale-[0.96] transition-transform pointer-events-none" />
         {badge && (
@@ -243,7 +251,7 @@ export default function Home() {
   const [typedText, setTypedText] = useState('')
 
   const { addRecentView } = useStore()
-  const ranking = useHorizontalScroll()
+  const { ref: rankingRef, canScrollLeft, canScrollRight, scrollDir, isDragged } = useHorizontalScroll()
 
   // ── 타이핑 플레이스홀더 ─────────────────────────────
   const PLACEHOLDER_PHRASES = useMemo(() => [
@@ -452,19 +460,19 @@ export default function Home() {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold text-gray-900 px-0.5">🔥 실시간 급상승 TOP 10</h2>
                   <div className="flex gap-1">
-                    <button type="button" onClick={() => ranking.scrollDir(-1)}
-                            className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${ranking.canScrollLeft ? 'bg-gray-200 text-gray-600 active:bg-gray-300' : 'bg-gray-100 text-gray-300'}`}>
+                    <button type="button" onClick={() => scrollDir(-1)}
+                            className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${canScrollLeft ? 'bg-gray-200 text-gray-600 active:bg-gray-300' : 'bg-gray-100 text-gray-300'}`}>
                       <ChevronLeft className="w-4 h-4" />
                     </button>
-                    <button type="button" onClick={() => ranking.scrollDir(1)}
-                            className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${ranking.canScrollRight ? 'bg-gray-200 text-gray-600 active:bg-gray-300' : 'bg-gray-100 text-gray-300'}`}>
+                    <button type="button" onClick={() => scrollDir(1)}
+                            className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${canScrollRight ? 'bg-gray-200 text-gray-600 active:bg-gray-300' : 'bg-gray-100 text-gray-300'}`}>
                       <ChevronRight className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
-                <div ref={ranking.ref} className="-mx-5 px-5 flex gap-3 overflow-x-auto no-scrollbar pb-1 select-none" style={{ touchAction: 'pan-y' }}>
+                <div ref={rankingRef} className="-mx-5 px-5 flex gap-3 overflow-x-auto no-scrollbar pb-1 select-none" style={{ touchAction: 'pan-y' }}>
                   {topProducts.map((p, i) => (
-                    <RankingCard key={p.code} product={p} rank={i + 1} onClickProduct={handleClickProduct} badge={i < 3 ? badges[i] : null} />
+                    <RankingCard key={p.code} product={p} rank={i + 1} onClickProduct={handleClickProduct} badge={i < 3 ? badges[i] : null} isDragged={isDragged} />
                   ))}
                 </div>
               </section>
