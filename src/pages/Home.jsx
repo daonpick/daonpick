@@ -105,17 +105,16 @@ function RankingCard({ product, rank, onClickProduct, badge }) {
     <button onClick={() => onClickProduct(product)} className="shrink-0 w-40 snap-start text-left group">
       <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-sm">
         <img src={product.image} alt={product.name} className="w-full h-full object-cover group-active:scale-[0.96] transition-transform" />
-        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/60 to-transparent" />
         {badge && (
           <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-white/90 backdrop-blur text-[#F37021] font-bold text-[10px]">
             {badge}
           </span>
         )}
         <div className="absolute top-2 right-2" onClick={(e) => { e.stopPropagation(); toggleWishlist(product) }}>
-          <Heart className={`w-5 h-5 drop-shadow-lg transition-colors ${wishlisted ? 'text-red-500 fill-red-500' : 'text-white/70'}`} />
+          <Heart className={`w-5 h-5 drop-shadow-lg transition-colors ${wishlisted ? 'text-red-500 fill-red-500' : 'text-white/80'}`} />
         </div>
-        <span className={`absolute bottom-0.5 left-2 text-6xl font-black italic leading-none tracking-tighter drop-shadow-2xl ${isTop3 ? 'text-[#F37021]' : 'text-white/40'}`}
-              style={{ WebkitTextStroke: isTop3 ? 'none' : '1px rgba(255,255,255,0.5)' }}>
+        <span className="absolute bottom-1 left-2 text-6xl font-black italic leading-none tracking-tighter text-[#F37021]"
+              style={{ WebkitTextStroke: '2px white', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.25))' }}>
           {rank}
         </span>
       </div>
