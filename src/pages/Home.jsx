@@ -13,12 +13,13 @@ const SETTINGS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSiix1
 const formatViewCount = (realCount, code) => {
   const views = Number(realCount) || 0;
   const productCode = Number(code) || 0;
-  
-  // 실제 조회수가 0이어도 최소 10~99 사이의 숫자가 나오게 함 (상품 코드 기반 시드)
-  const seed = (productCode % 90) + 10; 
-  const fakeNum = (views * 100) + seed;
 
-  if (fakeNum < 1000) return fakeNum.toLocaleString();
+  // 상품 코드 기반 고정 두자리 숫자(10~99)를 실제 조회수 뒤에 붙여서 뻥튀기
+  // 예: 조회수 2 → "248", 조회수 28 → "2877", 조회수 2867 → "286789"
+  const suffix = (productCode % 90) + 10;
+  const fakeNum = views === 0 ? suffix : Number(String(views) + String(suffix));
+
+  if (fakeNum < 1000) return String(fakeNum);
   if (fakeNum < 10000) return (fakeNum / 1000).toFixed(1) + '천';
   if (fakeNum < 1000000) return (fakeNum / 10000).toFixed(1) + '만';
   return Math.floor(fakeNum / 10000).toLocaleString() + '만';
