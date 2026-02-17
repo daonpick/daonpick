@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import Papa from 'papaparse'
-import { Search, Eye, ChevronDown, ArrowRight, Menu } from 'lucide-react'
+import { Search, Eye, ChevronDown, ArrowRight, Menu, Heart } from 'lucide-react'
 import { supabase } from '../supabaseClient'
+import { useStore } from '../store/useStore'
+import Sidebar from '../components/Sidebar'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 1. 설정 및 헬퍼 함수
@@ -96,6 +98,9 @@ function SkeletonGrid() {
 
 function RankingCard({ product, rank, onClickProduct, badge }) {
   const isTop3 = rank <= 3
+  const { toggleWishlist, isWishlisted } = useStore()
+  const wishlisted = isWishlisted(product.code)
+
   return (
     <button onClick={() => onClickProduct(product)} className="shrink-0 w-40 snap-start text-left group">
       <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-sm">
@@ -106,6 +111,9 @@ function RankingCard({ product, rank, onClickProduct, badge }) {
             {badge}
           </span>
         )}
+        <div className="absolute top-2 right-2" onClick={(e) => { e.stopPropagation(); toggleWishlist(product) }}>
+          <Heart className={`w-5 h-5 drop-shadow-lg transition-colors ${wishlisted ? 'text-red-500 fill-red-500' : 'text-white/70'}`} />
+        </div>
         <span className={`absolute bottom-0.5 left-2 text-6xl font-black italic leading-none tracking-tighter drop-shadow-2xl ${isTop3 ? 'text-[#F37021]' : 'text-white/40'}`}
               style={{ WebkitTextStroke: isTop3 ? 'none' : '1px rgba(255,255,255,0.5)' }}>
           {rank}
@@ -122,11 +130,17 @@ function RankingCard({ product, rank, onClickProduct, badge }) {
 }
 
 function ProductCard({ product, onClickProduct }) {
+  const { toggleWishlist, isWishlisted } = useStore()
+  const wishlisted = isWishlisted(product.code)
+
   return (
     <button onClick={() => onClickProduct(product)} className="text-left w-full group">
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
         <div className="relative aspect-square overflow-hidden bg-gray-100">
           <img src={product.image} alt={product.name} className="w-full h-full object-cover group-active:scale-[0.96] transition-transform" />
+          <div className="absolute top-2 right-2" onClick={(e) => { e.stopPropagation(); toggleWishlist(product) }}>
+            <Heart className={`w-5 h-5 drop-shadow-lg transition-colors ${wishlisted ? 'text-red-500 fill-red-500' : 'text-white/70'}`} />
+          </div>
         </div>
         <div className="p-3">
           <p className="text-[14px] font-bold text-[#222] leading-snug truncate tracking-tight">{product.name}</p>
@@ -154,6 +168,9 @@ export default function Home() {
   const [query, setQuery] = useState('')
   const [visibleCounts, setVisibleCounts] = useState({})
   const [activeTab, setActiveTab] = useState(undefined)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  const { addRecentView } = useStore()
 
   // ── 데이터 로드 ────────────────────────────────────
   useEffect(() => {
@@ -212,8 +229,10 @@ export default function Home() {
   // ── TOP3 뱃지 (새로고침 시 랜덤) ──────────────────
   const badges = useMemo(() => [getRandomBadge(), getRandomBadge(), getRandomBadge()], [])
 
-  // ── 클릭 핸들러 (GA4 + Supabase Await + 이동) ──────
+  // ── 클릭 핸들러 (GA4 + Supabase Await + 최근 본 상품 + 이동) ──
   const handleClickProduct = useCallback(async (product) => {
+    addRecentView(product)
+
     if (window.gtag) {
       window.gtag('event', 'click_product', {
         'event_category': 'Outbound Link',
@@ -244,7 +263,7 @@ export default function Home() {
     }
 
     window.location.href = product.link;
-  }, []);
+  }, [addRecentView]);
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -270,7 +289,7 @@ export default function Home() {
           <h1 className="text-2xl font-black tracking-tighter">
             <span className="text-[#F37021]">DAON</span><span className="text-gray-900"> PICK</span>
           </h1>
-          <button className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 active:bg-gray-100 transition-colors">
+          <button onClick={() => setSidebarOpen(true)} className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 active:bg-gray-100 transition-colors">
             <Menu className="w-5 h-5" />
           </button>
         </div>
@@ -336,7 +355,7 @@ export default function Home() {
                   return (
                     <div className="mt-6">
                       <div className="grid grid-cols-2 gap-4">
-                        {filtered.slice(0, visible).map((p, idx) => (
+                        {filtered.slice(0, visible).map((p) => (
                           <ProductCard key={p.code} product={p} onClickProduct={handleClickProduct} />
                         ))}
                       </div>
@@ -354,6 +373,14 @@ export default function Home() {
           </>
         )}
       </div>
+
+      {/* Sidebar */}
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        categories={categories}
+        onSelectCategory={(cat) => setActiveTab(cat)}
+      />
     </div>
   )
 }
