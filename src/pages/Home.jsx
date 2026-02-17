@@ -1,70 +1,58 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import Papa from 'papaparse'
-import { Search, Eye, ChevronDown, ArrowRight, Menu, Heart } from 'lucide-react'
+import { Search, Eye, ChevronDown, ChevronLeft, ChevronRight, ArrowRight, Menu, Heart } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useStore } from '../store/useStore'
 import Sidebar from '../components/Sidebar'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 0. PC 가로 스크롤 훅 (드래그 + 마우스 휠)
+// 0. 가로 스크롤 (화살표 버튼 + 휠)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function useDragScroll() {
+function useHorizontalScroll() {
   const ref = useRef(null)
-  const state = useRef({ isDown: false, startX: 0, scrollLeft: 0, moved: false })
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
 
-  const onMouseDown = useCallback((e) => {
+  const checkScroll = useCallback(() => {
     const el = ref.current
     if (!el) return
-    state.current = { isDown: true, startX: e.clientX, scrollLeft: el.scrollLeft, moved: false }
-    el.style.cursor = 'grabbing'
-    el.style.scrollSnapType = 'none'
+    setCanScrollLeft(el.scrollLeft > 0)
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 1)
   }, [])
 
-  const onMouseUp = useCallback(() => {
+  const scrollBy = useCallback((dir) => {
     const el = ref.current
     if (!el) return
-    state.current.isDown = false
-    el.style.cursor = 'grab'
-    el.style.scrollSnapType = ''
-  }, [])
-
-  const onMouseMove = useCallback((e) => {
-    if (!state.current.isDown) return
-    e.preventDefault()
-    const dx = e.clientX - state.current.startX
-    if (Math.abs(dx) > 3) state.current.moved = true
-    ref.current.scrollLeft = state.current.scrollLeft - dx
+    el.scrollBy({ left: dir * 180, behavior: 'smooth' })
   }, [])
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
 
-    el.style.cursor = 'grab'
+    checkScroll()
+    el.addEventListener('scroll', checkScroll, { passive: true })
 
     const onWheel = (e) => {
       if (el.scrollWidth <= el.clientWidth) return
-      e.preventDefault()
-      el.style.scrollSnapType = 'none'
-      el.scrollLeft += e.deltaY || e.deltaX
-      clearTimeout(el._snapTimer)
-      el._snapTimer = setTimeout(() => { el.style.scrollSnapType = '' }, 100)
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        e.preventDefault()
+        el.scrollBy({ left: e.deltaY, behavior: 'auto' })
+      }
     }
-
-    el.addEventListener('mousedown', onMouseDown)
-    document.addEventListener('mouseup', onMouseUp)
-    document.addEventListener('mousemove', onMouseMove)
     el.addEventListener('wheel', onWheel, { passive: false })
 
-    return () => {
-      el.removeEventListener('mousedown', onMouseDown)
-      document.removeEventListener('mouseup', onMouseUp)
-      document.removeEventListener('mousemove', onMouseMove)
-      el.removeEventListener('wheel', onWheel)
-    }
-  }, [onMouseDown, onMouseUp, onMouseMove])
+    const ro = new ResizeObserver(checkScroll)
+    ro.observe(el)
 
-  return ref
+    return () => {
+      el.removeEventListener('scroll', checkScroll)
+      el.removeEventListener('wheel', onWheel)
+      ro.disconnect()
+    }
+  }, [checkScroll])
+
+  return { ref, canScrollLeft, canScrollRight, scrollBy }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -234,7 +222,7 @@ export default function Home() {
   const [typedText, setTypedText] = useState('')
 
   const { addRecentView } = useStore()
-  const rankingScrollRef = useDragScroll()
+  const ranking = useHorizontalScroll()
 
   // ── 타이핑 플레이스홀더 ─────────────────────────────
   const PLACEHOLDER_PHRASES = useMemo(() => [
@@ -440,8 +428,20 @@ export default function Home() {
             {/* TOP 10 Ranking */}
             {topProducts.length > 0 && (
               <section className="mt-10">
-                <h2 className="text-lg font-bold text-gray-900 px-0.5 mb-4">🔥 실시간 급상승 TOP 10</h2>
-                <div ref={rankingScrollRef} className="-mx-5 px-5 flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar pb-1 select-none">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-gray-900 px-0.5">🔥 실시간 급상승 TOP 10</h2>
+                  <div className="flex gap-1">
+                    <button onClick={() => ranking.scrollBy(-1)} disabled={!ranking.canScrollLeft}
+                            className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${ranking.canScrollLeft ? 'bg-gray-200 text-gray-600 active:bg-gray-300' : 'bg-gray-100 text-gray-300'}`}>
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => ranking.scrollBy(1)} disabled={!ranking.canScrollRight}
+                            className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${ranking.canScrollRight ? 'bg-gray-200 text-gray-600 active:bg-gray-300' : 'bg-gray-100 text-gray-300'}`}>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <div ref={ranking.ref} className="-mx-5 px-5 flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar pb-1">
                   {topProducts.map((p, i) => (
                     <RankingCard key={p.code} product={p} rank={i + 1} onClickProduct={handleClickProduct} badge={i < 3 ? badges[i] : null} />
                   ))}
