@@ -472,7 +472,7 @@ export default function Home() {
                     </button>
                   </div>
                 </div>
-                <div ref={rankingRef} onMouseDown={onRankingMouseDown} className="-mx-5 px-5 flex gap-3 overflow-x-auto no-scrollbar pb-1 select-none cursor-grab active:cursor-grabbing" style={{ touchAction: 'pan-y' }}>
+                <div ref={rankingRef} onMouseDown={onRankingMouseDown} className="-mx-5 px-5 flex gap-3 overflow-x-auto no-scrollbar pb-1 select-none cursor-grab active:cursor-grabbing">
                   {topProducts.map((p, i) => (
                     <RankingCard key={p.code} product={p} rank={i + 1} onClickProduct={handleClickProduct} badge={i < 3 ? badges[i] : null} isDragged={isDragged} />
                   ))}
