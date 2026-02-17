@@ -208,8 +208,23 @@ export default function Home() {
     }
 
     if (supabase) {
-      // [수정 완료] await를 사용하여 서버에 기록될 때까지 기다립니다.
-      await supabase.rpc('increment_view', { product_code: String(product.code) });
+      const code = String(product.code)
+      const { data } = await supabase
+        .from('views')
+        .select('count')
+        .eq('code', code)
+        .single()
+
+      if (data) {
+        await supabase
+          .from('views')
+          .update({ count: (data.count ?? 0) + 1 })
+          .eq('code', code)
+      } else {
+        await supabase
+          .from('views')
+          .insert({ code, count: 1 })
+      }
     }
 
     window.location.href = product.link;
