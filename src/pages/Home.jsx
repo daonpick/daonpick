@@ -27,8 +27,34 @@ function useHorizontalScroll() {
     el.scrollTo({ left: el.scrollLeft + dir * 180, behavior: 'smooth' })
   }, [])
 
-  // 드래그 중이면 카드 클릭 방지용
   const isDragged = useCallback(() => drag.current.moved, [])
+
+  // React onMouseDown 핸들러 — JSX에 직접 바인딩
+  const onMouseDown = useCallback((e) => {
+    if (e.button !== 0) return
+    const el = ref.current
+    if (!el) return
+    e.preventDefault()
+    drag.current = { active: true, startX: e.clientX, sl: el.scrollLeft, moved: false }
+
+    const onMouseMove = (ev) => {
+      if (!drag.current.active) return
+      ev.preventDefault()
+      const dx = ev.clientX - drag.current.startX
+      if (Math.abs(dx) > 3) drag.current.moved = true
+      el.scrollLeft = drag.current.sl - dx
+    }
+
+    const onMouseUp = () => {
+      drag.current.active = false
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+      setTimeout(() => { drag.current.moved = false }, 0)
+    }
+
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  }, [])
 
   useEffect(() => {
     const el = ref.current
@@ -37,7 +63,6 @@ function useHorizontalScroll() {
     check()
     el.addEventListener('scroll', check, { passive: true })
 
-    // 휠
     const onWheel = (e) => {
       if (el.scrollWidth <= el.clientWidth) return
       e.preventDefault()
@@ -45,45 +70,13 @@ function useHorizontalScroll() {
     }
     el.addEventListener('wheel', onWheel, { passive: false })
 
-    // 드래그 (mousedown on container, mousemove/mouseup on document)
-    const onMouseDown = (e) => {
-      if (e.button !== 0) return
-      e.preventDefault() // 브라우저 기본 드래그(텍스트 선택, 이미지 드래그) 방지
-      drag.current = { active: true, startX: e.clientX, sl: el.scrollLeft, moved: false }
-      el.style.cursor = 'grabbing'
-      el.style.userSelect = 'none'
-    }
-
-    const onMouseMove = (e) => {
-      if (!drag.current.active) return
-      e.preventDefault()
-      const dx = e.clientX - drag.current.startX
-      if (Math.abs(dx) > 3) drag.current.moved = true
-      el.scrollLeft = drag.current.sl - dx
-    }
-
-    const onMouseUp = () => {
-      if (!drag.current.active) return
-      drag.current.active = false
-      el.style.cursor = ''
-      el.style.userSelect = ''
-      setTimeout(() => { drag.current.moved = false }, 0)
-    }
-
-    el.addEventListener('mousedown', onMouseDown)
-    document.addEventListener('mousemove', onMouseMove)
-    document.addEventListener('mouseup', onMouseUp)
-
     return () => {
       el.removeEventListener('scroll', check)
       el.removeEventListener('wheel', onWheel)
-      el.removeEventListener('mousedown', onMouseDown)
-      document.removeEventListener('mousemove', onMouseMove)
-      document.removeEventListener('mouseup', onMouseUp)
     }
   }, [check])
 
-  return { ref, canScrollLeft, canScrollRight, scrollDir, isDragged }
+  return { ref, canScrollLeft, canScrollRight, scrollDir, isDragged, onMouseDown }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -253,7 +246,7 @@ export default function Home() {
   const [typedText, setTypedText] = useState('')
 
   const { addRecentView } = useStore()
-  const { ref: rankingRef, canScrollLeft, canScrollRight, scrollDir, isDragged } = useHorizontalScroll()
+  const { ref: rankingRef, canScrollLeft, canScrollRight, scrollDir, isDragged, onMouseDown: onRankingMouseDown } = useHorizontalScroll()
 
   // ── 타이핑 플레이스홀더 ─────────────────────────────
   const PLACEHOLDER_PHRASES = useMemo(() => [
@@ -472,7 +465,7 @@ export default function Home() {
                     </button>
                   </div>
                 </div>
-                <div ref={rankingRef} className="-mx-5 px-5 flex gap-3 overflow-x-auto no-scrollbar pb-1 select-none" style={{ touchAction: 'pan-y' }}>
+                <div ref={rankingRef} onMouseDown={onRankingMouseDown} className="-mx-5 px-5 flex gap-3 overflow-x-auto no-scrollbar pb-1 select-none cursor-grab active:cursor-grabbing" style={{ touchAction: 'pan-y' }}>
                   {topProducts.map((p, i) => (
                     <RankingCard key={p.code} product={p} rank={i + 1} onClickProduct={handleClickProduct} badge={i < 3 ? badges[i] : null} isDragged={isDragged} />
                   ))}
