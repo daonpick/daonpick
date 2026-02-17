@@ -94,37 +94,39 @@ function SkeletonGrid() {
   )
 }
 
-function RankingCard({ product, rank, onClickProduct }) {
+function RankingCard({ product, rank, onClickProduct, badge }) {
   const isTop3 = rank <= 3
   return (
-    <button onClick={() => onClickProduct(product)} className="shrink-0 w-36 text-left group">
+    <button onClick={() => onClickProduct(product)} className="shrink-0 w-[80%] snap-start text-left group">
       <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-gray-100">
         <img src={product.image} alt={product.name} className="w-full h-full object-cover group-active:scale-[0.96] transition-transform" />
         <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/60 to-transparent" />
-        <span className={`absolute bottom-1 left-2 text-6xl font-black italic leading-none tracking-tighter ${isTop3 ? 'text-[#F37021]' : 'text-white/40'}`}
+        {badge && (
+          <span className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-white/90 backdrop-blur text-[#F37021] font-bold text-xs">
+            {badge}
+          </span>
+        )}
+        <span className={`absolute bottom-1 left-3 text-8xl font-black italic leading-none tracking-tighter drop-shadow-2xl ${isTop3 ? 'text-[#F37021]' : 'text-white/40'}`}
               style={{ WebkitTextStroke: isTop3 ? 'none' : '1px rgba(255,255,255,0.5)' }}>
           {rank}
         </span>
       </div>
-      <p className="mt-2 text-[13px] font-medium text-gray-900 truncate tracking-tight">{product.name}</p>
-      <span className="flex items-center gap-0.5 text-xs text-gray-400 mt-0.5">
-        <Eye className="w-3 h-3" /> {formatViewCount(product.views, product.code)}
-      </span>
+      <div className="mt-2.5 px-0.5">
+        <p className="text-[14px] font-bold text-gray-900 truncate tracking-tight">{product.name}</p>
+        <span className="flex items-center gap-0.5 text-xs text-gray-400 mt-0.5">
+          <Eye className="w-3 h-3" /> {formatViewCount(product.views, product.code)}
+        </span>
+      </div>
     </button>
   )
 }
 
-function ProductCard({ product, onClickProduct, badge }) {
+function ProductCard({ product, onClickProduct }) {
   return (
     <button onClick={() => onClickProduct(product)} className="text-left w-full group">
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
         <div className="relative aspect-square overflow-hidden bg-gray-100">
           <img src={product.image} alt={product.name} className="w-full h-full object-cover group-active:scale-[0.96] transition-transform" />
-          {badge && (
-            <span className="absolute top-2 left-2 px-2 py-1 rounded-lg bg-[#F37021]/10 text-[#F37021] font-bold text-xs backdrop-blur-sm">
-              {badge}
-            </span>
-          )}
         </div>
         <div className="p-3">
           <p className="text-[14px] font-bold text-[#222] leading-snug truncate tracking-tight">{product.name}</p>
@@ -278,7 +280,7 @@ export default function Home() {
         <form onSubmit={handleSearch} className="mt-6 relative">
           <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="상품번호 입력"
                  className="w-full h-12 pl-5 pr-14 rounded-2xl bg-white text-[14px] text-gray-900 placeholder-gray-300 outline-none shadow-lg border-0 transition focus:shadow-xl" />
-          <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl bg-gradient-to-r from-[#F37021] to-[#FF9055] text-white flex items-center justify-center active:scale-90 transition-transform">
+          <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl bg-gradient-to-r from-[#F37021] to-[#FF8F50] text-white flex items-center justify-center active:scale-90 transition-transform">
             <Search className="w-4 h-4" />
           </button>
         </form>
@@ -308,10 +310,10 @@ export default function Home() {
             {/* TOP 10 Ranking */}
             {topProducts.length > 0 && (
               <section className="mt-10">
-                <h2 className="text-lg font-bold text-gray-900 px-0.5">🔥 실시간 급상승 TOP 10</h2>
-                <div className="mt-4 -mx-5 px-5 flex gap-4 overflow-x-auto no-scrollbar pb-1">
+                <h2 className="text-lg font-bold text-gray-900 px-0.5 mb-4">🔥 실시간 급상승 TOP 10</h2>
+                <div className="mt-4 -mx-5 px-5 flex gap-4 overflow-x-auto snap-x snap-mandatory no-scrollbar pb-2">
                   {topProducts.map((p, i) => (
-                    <RankingCard key={p.code} product={p} rank={i + 1} onClickProduct={handleClickProduct} />
+                    <RankingCard key={p.code} product={p} rank={i + 1} onClickProduct={handleClickProduct} badge={i < 3 ? badges[i] : null} />
                   ))}
                 </div>
               </section>
@@ -323,7 +325,7 @@ export default function Home() {
                 <div className="-mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar">
                   {categories.map((cat) => (
                     <button key={cat} onClick={() => setActiveTab(cat)}
-                            className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-colors ${effectiveTab === cat ? 'bg-gradient-to-r from-[#F37021] to-[#FF9055] text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-colors ${effectiveTab === cat ? 'bg-gradient-to-r from-[#F37021] to-[#FF8F50] text-white' : 'bg-gray-100 text-gray-500'}`}>
                       {cat}
                     </button>
                   ))}
@@ -335,7 +337,7 @@ export default function Home() {
                     <div className="mt-6">
                       <div className="grid grid-cols-2 gap-4">
                         {filtered.slice(0, visible).map((p, idx) => (
-                          <ProductCard key={p.code} product={p} onClickProduct={handleClickProduct} badge={idx < 3 ? badges[idx] : null} />
+                          <ProductCard key={p.code} product={p} onClickProduct={handleClickProduct} />
                         ))}
                       </div>
                       {visible < filtered.length && (
