@@ -360,10 +360,11 @@ export default function Home() {
     return list
   }, [products])
 
-  const effectiveTab = activeTab !== undefined ? activeTab : categories[0] ?? null
+  const allCategories = useMemo(() => ['전체', ...categories], [categories])
+  const effectiveTab = activeTab !== undefined ? activeTab : '전체'
 
   const filteredProducts = useMemo(() => {
-    if (!effectiveTab) return []
+    if (effectiveTab === '전체') return products
     return products.filter((p) => p.category === effectiveTab)
   }, [products, effectiveTab])
 
@@ -544,10 +545,10 @@ export default function Home() {
             )}
 
             {/* Category Grid */}
-            {categories.length > 0 && (
+            {allCategories.length > 1 && (
               <section className="mt-12" ref={categorySectionRef}>
                 <div ref={categoryRef} onMouseDown={onCategoryMouseDown} className="-mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar select-none cursor-grab active:cursor-grabbing">
-                  {categories.map((cat, i) => (
+                  {allCategories.map((cat, i) => (
                     <button key={cat} onClick={() => setActiveTab(cat)}
                             className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-all duration-700 ease-out ${effectiveTab === cat ? 'bg-gradient-to-r from-[#F37021] to-[#FF8F50] text-white' : 'bg-gray-100 text-gray-500'} ${categoryVisible ? '' : 'opacity-0 translate-y-4'}`}
                             style={categoryVisible ? { animation: 'slide-up 0.7s ease-out forwards', animationDelay: `${i * 150}ms`, opacity: 0 } : undefined}>
