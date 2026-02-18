@@ -305,12 +305,14 @@ export default function Home() {
   const [inputFocused, setInputFocused] = useState(false)
   const [typedText, setTypedText] = useState('')
   const [categoryVisible, setCategoryVisible] = useState(false)
+  const [navVisible, setNavVisible] = useState(false)
 
   const { addRecentView } = useStore()
   const { ref: rankingRef, canScrollLeft, canScrollRight, scrollDir, isDragged, onMouseDown: onRankingMouseDown } = useHorizontalScroll()
   const { ref: categoryRef, onMouseDown: onCategoryMouseDown } = useHorizontalScroll()
   const { ref: navRef, onMouseDown: onNavMouseDown } = useHorizontalScroll()
   const categorySectionRef = useRef(null)
+  const navSectionRef = useRef(null)
 
   // ── 타이핑 플레이스홀더 ─────────────────────────────
   const PLACEHOLDER_PHRASES = useMemo(() => [
@@ -420,17 +422,23 @@ export default function Home() {
     setVisibleCount(ITEMS_PER_PAGE)
   }, [effectiveTab])
 
-  // ── 카테고리 섹션 스크롤 감지 ──────────────────────
+  // ── Nav 버튼 + 카테고리 섹션 스크롤 감지 (재진입 시 재생) ──
+  useEffect(() => {
+    const navEl = navSectionRef.current
+    if (!navEl) return
+    const observer = new IntersectionObserver(
+      ([entry]) => setNavVisible(entry.isIntersecting),
+      { threshold: 0.2 }
+    )
+    observer.observe(navEl)
+    return () => observer.disconnect()
+  }, [loading])
+
   useEffect(() => {
     const el = categorySectionRef.current
     if (!el) return
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setCategoryVisible(true)
-          observer.disconnect()
-        }
-      },
+      ([entry]) => setCategoryVisible(entry.isIntersecting),
       { threshold: 0.2 }
     )
     observer.observe(el)
@@ -523,11 +531,11 @@ export default function Home() {
 
         {/* Nav Buttons */}
         {navButtons.length > 0 && (
-          <div ref={navRef} onMouseDown={onNavMouseDown} className="mt-5 -mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar select-none cursor-grab active:cursor-grabbing">
+          <div ref={(el) => { navRef.current = el; navSectionRef.current = el }} onMouseDown={onNavMouseDown} className="mt-5 -mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar select-none cursor-grab active:cursor-grabbing">
             {navButtons.map((btn, i) => (
               <button key={btn.label} onClick={() => { window.location.href = btn.url }}
-                      className="shrink-0 px-4 py-2 rounded-full bg-gray-100 text-[13px] font-medium text-gray-600 active:scale-95 transition-transform opacity-0"
-                      style={{ animation: 'slide-in-left 0.5s ease-out forwards', animationDelay: `${i * 200}ms` }}>
+                      className={`shrink-0 px-4 py-2 rounded-full bg-gray-100 text-[13px] font-medium text-gray-600 active:scale-95 transition-transform ${navVisible ? '' : 'opacity-0'}`}
+                      style={navVisible ? { animation: 'slide-in-left 0.5s ease-out forwards', animationDelay: `${i * 200}ms`, opacity: 0 } : undefined}>
                 {btn.label}
               </button>
             ))}
