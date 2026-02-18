@@ -89,7 +89,7 @@ export default function LuckyCard({ products, onClickProduct }) {
               </div>
               <button
                 onClick={() => onClickProduct(luckyItem)}
-                className="flex items-center justify-center gap-1 w-full py-2 rounded-xl bg-gradient-to-r from-[#F37021] to-[#FF8F50] text-white text-[12px] font-bold active:scale-[0.97] transition-transform"
+                className="btn-pulse-glow flex items-center justify-center gap-1 w-full py-2 rounded-xl bg-gradient-to-r from-[#F37021] to-[#FF8F50] text-white text-[12px] font-bold active:scale-[0.97] transition-transform"
               >
                 상품 보러가기 <ArrowRight className="w-3.5 h-3.5" />
               </button>
@@ -137,7 +137,7 @@ export default function LuckyCard({ products, onClickProduct }) {
                   </svg>
                 </div>
                 <div
-                  className={`relative z-10 flex flex-col items-center gap-2 ${phase === 'idle' ? 'animate-[lucky-float_3s_ease-in-out_infinite]' : ''}`}
+                  className={`relative z-10 flex flex-col items-center gap-2 ${phase === 'idle' ? 'animate-[lucky-breathe_3s_ease-in-out_infinite]' : ''}`}
                   style={phase === 'idle' ? { animationDelay: `${idx * 0.4}s` } : undefined}
                 >
                   <Icon className="w-8 h-8 text-white" strokeWidth={1.5} />

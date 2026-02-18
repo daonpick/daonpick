@@ -20,12 +20,46 @@
   scrollbar-width: none;
 }
 
-@keyframes lucky-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+/* ─── Lucky Card: Float + Scale (breathe) ─── */
+@keyframes lucky-breathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-6px) scale(1.02); }
 }
 
 @keyframes lucky-fade-in {
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
+}
+
+/* ─── Shimmer: 대각선 빛 스윕 ─── */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.badge-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.badge-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255,255,255,0.5) 50%,
+    transparent 70%
+  );
+  animation: shimmer 2.5s ease-in-out infinite;
+}
+
+/* ─── Pulse Glow: CTA 버튼 ─── */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(243,112,33,0.4); }
+  50% { box-shadow: 0 0 16px 4px rgba(243,112,33,0.25); }
+}
+
+.btn-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
 }
