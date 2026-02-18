@@ -32,6 +32,7 @@ export function StoreProvider({ children }) {
   }, [wishlist])
 
   const addRecentView = useCallback((product) => {
+    if (!product?.code || !product?.name || !product?.image) return
     setRecentViews((prev) => {
       const code = String(product.code)
       const filtered = prev.filter((p) => String(p.code) !== code)
