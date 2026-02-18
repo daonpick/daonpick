@@ -189,7 +189,7 @@ function RankingCard({ product, rank, onClickProduct, badge, isDragged }) {
         <img src={product.image} alt={product.name} draggable={false} className="w-full h-full object-cover group-active:scale-[0.96] transition-transform pointer-events-none" />
         {badge && (
           <span className="badge-shimmer absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-white/90 backdrop-blur text-[#F37021] font-bold text-[10px]">
-            {badge}
+            <span className="relative z-10">{badge}</span>
           </span>
         )}
         <div className="absolute top-2 right-2" onClick={(e) => { e.stopPropagation(); toggleWishlist(product) }}>
