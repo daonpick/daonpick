@@ -395,25 +395,31 @@ export default function Home() {
   const topProducts = useMemo(() => [...products].sort((a, b) => (b.views ?? 0) - (a.views ?? 0)).slice(0, 10), [products])
 
   const CATEGORY_ORDER = [
-    '주방용품', '생활용품', '가전디지털', '인테리어',
-    '반려용품', '뷰티', '식품', '완구/취미', '자동차용품',
+    { key: '주방용품', label: '🍽️주방용품' },
+    { key: '생활용품', label: '🧺생활용품' },
+    { key: '가전디지털', label: '🎧가전디지털' },
+    { key: '인테리어', label: '🕯️인테리어' },
+    { key: '반려용품', label: '🐾반려용품' },
+    { key: '뷰티', label: '🧴뷰티' },
+    { key: '식품', label: '🍷식품' },
+    { key: '완구/취미', label: '🛹완구/취미' },
+    { key: '자동차용품', label: '🏎️자동차용품' },
   ]
-  const CATEGORY_EMOJI = {
-    '주방용품': '🍽️', '생활용품': '🧺', '가전디지털': '🎧', '인테리어': '🕯️',
-    '반려용품': '🐾', '뷰티': '🧴', '식품': '🍷', '완구/취미': '🛹', '자동차용품': '🏎️',
-  }
+
+  // CSV 카테고리에서 이모지 제거 → 한글명만 추출
+  const stripEmoji = (str) => str.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F]/gu, '').trim()
 
   const categories = useMemo(() => {
-    const existing = new Set(products.map((p) => p.category))
-    return CATEGORY_ORDER.filter((cat) => existing.has(cat))
+    const existingKeys = new Set(products.map((p) => stripEmoji(p.category)))
+    return CATEGORY_ORDER.filter((c) => existingKeys.has(c.key))
   }, [products])
 
-  const allCategories = useMemo(() => ['전체', ...categories], [categories])
+  const allCategories = useMemo(() => [{ key: '전체', label: '전체' }, ...categories], [categories])
   const effectiveTab = activeTab !== undefined ? activeTab : '전체'
 
   const filteredProducts = useMemo(() => {
     if (effectiveTab === '전체') return products
-    return products.filter((p) => p.category === effectiveTab)
+    return products.filter((p) => stripEmoji(p.category) === effectiveTab)
   }, [products, effectiveTab])
 
   const hasMore = visibleCount < filteredProducts.length
@@ -591,11 +597,11 @@ export default function Home() {
               <section id="category-section" className="mt-12" ref={categorySectionRef}>
                 <div ref={(el) => { categoryRef.current = el; categoryTabRef.current = el }} onMouseDown={onCategoryMouseDown} className="-mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar select-none cursor-grab active:cursor-grabbing">
                   {allCategories.map((cat, i) => (
-                    <button key={cat} onClick={() => setActiveTab(cat)}
+                    <button key={cat.key} onClick={() => setActiveTab(cat.key)}
                             data-category-tab
-                            className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-all duration-700 ease-out ${effectiveTab === cat ? 'bg-gradient-to-r from-[#F37021] to-[#FF8F50] text-white active-tab' : 'bg-gray-100 text-gray-500'} ${categoryVisible ? '' : 'opacity-0 translate-y-4'}`}
+                            className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-all duration-700 ease-out ${effectiveTab === cat.key ? 'bg-gradient-to-r from-[#F37021] to-[#FF8F50] text-white active-tab' : 'bg-gray-100 text-gray-500'} ${categoryVisible ? '' : 'opacity-0 translate-y-4'}`}
                             style={categoryVisible ? { animation: 'slide-up 0.7s ease-out forwards', animationDelay: `${i * 150}ms`, opacity: 0 } : undefined}>
-                      {cat === '전체' ? cat : `${CATEGORY_EMOJI[cat] || ''}${cat}`}
+                      {cat.label}
                     </button>
                   ))}
                 </div>
