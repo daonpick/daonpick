@@ -446,9 +446,10 @@ export default function Home() {
         {/* Nav Buttons */}
         {navButtons.length > 0 && (
           <div ref={navRef} onMouseDown={onNavMouseDown} className="mt-5 -mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar select-none cursor-grab active:cursor-grabbing">
-            {navButtons.map((btn) => (
+            {navButtons.map((btn, i) => (
               <button key={btn.label} onClick={() => { window.location.href = btn.url }}
-                      className="shrink-0 px-4 py-2 rounded-full bg-gray-100 text-[13px] font-medium text-gray-600 active:scale-95 transition-transform">
+                      className="shrink-0 px-4 py-2 rounded-full bg-gray-100 text-[13px] font-medium text-gray-600 active:scale-95 transition-transform opacity-0"
+                      style={{ animation: 'slide-in-left 0.5s ease-out forwards', animationDelay: `${i * 100}ms` }}>
                 {btn.label}
               </button>
             ))}
