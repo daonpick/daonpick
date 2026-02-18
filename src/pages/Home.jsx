@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react'
+import { Helmet } from 'react-helmet-async'
 import Papa from 'papaparse'
 import { Search, Eye, ChevronLeft, ChevronRight, ArrowRight, Menu, Heart } from 'lucide-react'
 import { supabase } from '../supabaseClient'
@@ -187,16 +188,18 @@ function RankingCard({ product, rank, onClickProduct, badge, isDragged }) {
          className="shrink-0 w-40 text-left cursor-pointer select-none active:scale-[0.97] transition-transform"
          style={{ WebkitTouchCallout: 'none' }}>
       <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-sm">
-        <img src={product.image} alt={product.name} draggable={false} className="w-full h-full object-cover pointer-events-none" />
+        <img src={product.image} alt={product.name} draggable={false} loading="lazy" decoding="async"
+             onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/f3f4f6/9ca3af?text=No+Image' }}
+             className="w-full h-full object-cover pointer-events-none" />
         {badge && (
           <span className="badge-shimmer absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-white/90 backdrop-blur text-[#F37021] font-bold text-[10px]"
                 style={{ '--shimmer-delay': `${(rank - 1) * 0.8}s` }}>
             <span className="relative z-10">{badge}</span>
           </span>
         )}
-        <div className="absolute top-2 right-2 z-10" onClick={(e) => { e.stopPropagation(); toggleWishlist(product) }}>
+        <button aria-label={wishlisted ? '찜 해제' : '찜하기'} className="absolute top-2 right-2 z-10" onClick={(e) => { e.stopPropagation(); toggleWishlist(product) }}>
           <Heart className={`w-5 h-5 drop-shadow-lg transition-colors ${wishlisted ? 'text-red-500 fill-red-500' : 'text-white/80'}`} />
-        </div>
+        </button>
         <span className="absolute bottom-1 left-2 text-6xl font-black italic leading-none tracking-tighter"
               style={{
                 color: '#F37021',
@@ -227,16 +230,17 @@ function ProductCard({ product, onClickProduct }) {
          style={{ WebkitTouchCallout: 'none' }}>
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
         <div className="relative aspect-square overflow-hidden bg-gray-100">
-          <img src={product.image} alt={product.name} draggable={false}
+          <img src={product.image} alt={product.name} draggable={false} loading="lazy" decoding="async"
+               onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/f3f4f6/9ca3af?text=No+Image' }}
                className="w-full h-full object-cover pointer-events-none" />
           {product.code && (
             <div className="absolute top-0 left-0 bg-[#191F28]/80 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1.5 rounded-br-xl z-10">
               {product.code}
             </div>
           )}
-          <div className="absolute top-2 right-2 z-10" onClick={(e) => { e.stopPropagation(); toggleWishlist(product) }}>
+          <button aria-label={wishlisted ? '찜 해제' : '찜하기'} className="absolute top-2 right-2 z-10" onClick={(e) => { e.stopPropagation(); toggleWishlist(product) }}>
             <Heart className={`w-5 h-5 drop-shadow-lg transition-colors ${wishlisted ? 'text-red-500 fill-red-500' : 'text-white/70'}`} />
-          </div>
+          </button>
         </div>
         <div className="p-3">
           <p className="text-[14px] font-bold text-[#222] leading-snug truncate tracking-tight">{product.name}</p>
@@ -311,6 +315,7 @@ export default function Home() {
   const [typedText, setTypedText] = useState('')
   const [categoryVisible, setCategoryVisible] = useState(false)
   const [navVisible, setNavVisible] = useState(false)
+  const [searchToast, setSearchToast] = useState('')
 
   const { addRecentView } = useStore()
   const { ref: rankingRef, canScrollLeft, canScrollRight, scrollDir, isDragged, onMouseDown: onRankingMouseDown } = useHorizontalScroll()
@@ -505,13 +510,33 @@ export default function Home() {
     const trimmed = query.trim()
     if (!trimmed) return
     const found = products.find((p) => p.code === trimmed)
-    if (found) handleClickProduct(found)
-    else { alert('존재하지 않는 코드입니다.'); window.location.href = fallbackUrl }
+    if (found) {
+      handleClickProduct(found)
+    } else {
+      setSearchToast('존재하지 않는 코드입니다. 잠시 후 이동합니다.')
+      setTimeout(() => {
+        setSearchToast('')
+        window.location.href = fallbackUrl
+      }, 2000)
+    }
   }
 
   // ── 렌더링 ─────────────────────────────────────────
+  const seoTitle = effectiveTab === '전체'
+    ? '다온픽 | 영상 속 그 제품, 번호로 찾으세요'
+    : `다온픽 | ${effectiveTab} 상품 모아보기`
+  const seoDesc = effectiveTab === '전체'
+    ? '유튜브, 쇼츠 꿀템 정보를 번호 하나로 쉽고 빠르게 확인하세요.'
+    : `${effectiveTab} 카테고리의 인기 상품을 다온픽에서 확인하세요.`
+
   return (
     <div className="flex flex-col items-center min-h-screen bg-[#FAFAFA] tracking-tight">
+      <Helmet>
+        <title>{seoTitle}</title>
+        <meta name="description" content={seoDesc} />
+        <meta property="og:title" content={seoTitle} />
+        <meta property="og:description" content={seoDesc} />
+      </Helmet>
       <div className="sticky top-0 z-50 w-full bg-gray-800">
         <p className="max-w-[480px] mx-auto px-4 py-1.5 text-[10px] text-gray-400 text-center leading-relaxed">
           이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
@@ -524,7 +549,7 @@ export default function Home() {
           <h1 className="text-2xl font-black tracking-tighter">
             <span className="text-[#F37021]">DAON</span><span className="text-gray-900"> PICK</span>
           </h1>
-          <button onClick={() => setSidebarOpen(true)} className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 active:bg-gray-100 transition-colors">
+          <button aria-label="메뉴 열기" onClick={() => setSidebarOpen(true)} className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 active:bg-gray-100 transition-colors">
             <Menu className="w-5 h-5" />
           </button>
         </div>
@@ -540,7 +565,7 @@ export default function Home() {
               {typedText}<span className="inline-block w-[2px] h-[16px] bg-gray-300 align-middle ml-0.5 animate-pulse" />
             </span>
           )}
-          <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl bg-gradient-to-r from-[#F37021] to-[#FF8F50] text-white flex items-center justify-center active:scale-90 transition-transform">
+          <button type="submit" aria-label="검색" className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl bg-gradient-to-r from-[#F37021] to-[#FF8F50] text-white flex items-center justify-center active:scale-90 transition-transform">
             <Search className="w-4 h-4" />
           </button>
         </form>
@@ -574,11 +599,11 @@ export default function Home() {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold text-gray-900 px-0.5">🔥 실시간 급상승 TOP 10</h2>
                   <div className="flex gap-1">
-                    <button type="button" onClick={() => scrollDir(-1)}
+                    <button type="button" aria-label="이전 상품" onClick={() => scrollDir(-1)}
                             className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${canScrollLeft ? 'bg-gray-200 text-gray-600 active:bg-gray-300' : 'bg-gray-100 text-gray-300'}`}>
                       <ChevronLeft className="w-4 h-4" />
                     </button>
-                    <button type="button" onClick={() => scrollDir(1)}
+                    <button type="button" aria-label="다음 상품" onClick={() => scrollDir(1)}
                             className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${canScrollRight ? 'bg-gray-200 text-gray-600 active:bg-gray-300' : 'bg-gray-100 text-gray-300'}`}>
                       <ChevronRight className="w-4 h-4" />
                     </button>
@@ -623,6 +648,11 @@ export default function Home() {
             )}
           </>
         )}
+      </div>
+
+      {/* Search Toast */}
+      <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[80] px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium shadow-lg transition-all duration-300 ${searchToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+        {searchToast}
       </div>
 
       {/* Sidebar */}

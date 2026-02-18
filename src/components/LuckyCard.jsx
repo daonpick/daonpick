@@ -76,7 +76,9 @@ export default function LuckyCard({ products, onClickProduct }) {
           <div className="flex flex-row h-40">
             {/* Left — image */}
             <div className="w-2/5 bg-gray-100 overflow-hidden relative shrink-0">
-              <img src={luckyItem.image} alt={luckyItem.name} draggable={false} className="w-full h-full object-cover pointer-events-none" />
+              <img src={luckyItem.image} alt={luckyItem.name} draggable={false} loading="lazy" decoding="async"
+                   onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/f3f4f6/9ca3af?text=No+Image' }}
+                   className="w-full h-full object-cover pointer-events-none" />
               <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-[#F37021] text-white text-[9px] font-bold">
                 Lucky ✨
               </span>

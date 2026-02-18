@@ -73,7 +73,7 @@ export default function Sidebar({ open, onClose, categories, onSelectCategory })
           {/* Header */}
           <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
             <h2 className="text-lg font-bold text-[#191F28] tracking-tight">다온픽 메뉴</h2>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 active:bg-gray-100">
+            <button aria-label="메뉴 닫기" onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 active:bg-gray-100">
               <X className="w-5 h-5" />
             </button>
           </div>
