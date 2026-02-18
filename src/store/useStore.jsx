@@ -13,7 +13,12 @@ function loadJSON(key, fallback) {
 
 export function StoreProvider({ children }) {
   const [wishlist, setWishlist] = useState(() => loadJSON('daonpick_wishlist', []))
-  const [recentViews, setRecentViews] = useState(() => loadJSON('daonpick_recent', []))
+  const [recentViews, setRecentViews] = useState(() => {
+    const raw = loadJSON('daonpick_recent', [])
+    const cleaned = raw.filter((p) => p?.code && p?.name && p?.image)
+    if (cleaned.length !== raw.length) localStorage.setItem('daonpick_recent', JSON.stringify(cleaned))
+    return cleaned
+  })
 
   const toggleWishlist = useCallback((product) => {
     setWishlist((prev) => {

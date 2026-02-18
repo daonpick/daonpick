@@ -529,9 +529,9 @@ export default function Home() {
         <form onSubmit={handleSearch} className="mt-6 relative">
           <input type="text" value={query} onChange={(e) => setQuery(e.target.value)}
                  onFocus={() => setInputFocused(true)} onBlur={() => setInputFocused(false)}
-                 className="w-full h-12 pl-5 pr-14 rounded-2xl bg-white text-[14px] text-gray-900 outline-none shadow-lg border-0 transition focus:shadow-xl" />
+                 className="w-full h-12 pl-5 pr-14 rounded-2xl bg-white text-[16px] text-gray-900 outline-none shadow-lg border-0 transition focus:shadow-xl" />
           {!query && !inputFocused && (
-            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-[14px] text-gray-300 pointer-events-none">
+            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-[16px] text-gray-300 pointer-events-none">
               {typedText}<span className="inline-block w-[2px] h-[16px] bg-gray-300 align-middle ml-0.5 animate-pulse" />
             </span>
           )}
