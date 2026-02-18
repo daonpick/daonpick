@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react'
 import Papa from 'papaparse'
 import { Search, Eye, ChevronLeft, ChevronRight, ArrowRight, Menu, Heart } from 'lucide-react'
 import { supabase } from '../supabaseClient'
@@ -250,7 +250,49 @@ function ProductCard({ product, onClickProduct }) {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 4. 메인 페이지 컴포넌트
+// 4. 무한 스크롤 상품 그리드 (memo로 분리 → 상위 리렌더 차단)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const InfiniteProductGrid = memo(function InfiniteProductGrid({ filteredProducts, visibleCount, hasMore, onLoadMore, onClickProduct }) {
+  const loadMoreRef = useRef(null)
+
+  useEffect(() => {
+    const el = loadMoreRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) onLoadMore()
+      },
+      { threshold: 0.1 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasMore, onLoadMore])
+
+  return (
+    <div className="mt-6">
+      <div className="grid grid-cols-2 gap-4">
+        {filteredProducts.slice(0, visibleCount).map((p, i) => {
+          const isNewBatch = i >= visibleCount - ITEMS_PER_PAGE
+          return (
+            <div key={p.code}
+                 className={isNewBatch ? 'opacity-0' : ''}
+                 style={isNewBatch ? { animation: 'slide-up 0.7s ease-out forwards', animationDelay: `${(i % ITEMS_PER_PAGE) * 200}ms` } : undefined}>
+              <ProductCard product={p} onClickProduct={onClickProduct} />
+            </div>
+          )
+        })}
+      </div>
+      {hasMore && (
+        <div ref={loadMoreRef} className="mt-6">
+          <SkeletonGrid />
+        </div>
+      )}
+    </div>
+  )
+})
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 5. 메인 페이지 컴포넌트
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export default function Home() {
   const [products, setProducts] = useState([])
@@ -268,7 +310,6 @@ export default function Home() {
   const { ref: rankingRef, canScrollLeft, canScrollRight, scrollDir, isDragged, onMouseDown: onRankingMouseDown } = useHorizontalScroll()
   const { ref: categoryRef, onMouseDown: onCategoryMouseDown } = useHorizontalScroll()
   const { ref: navRef, onMouseDown: onNavMouseDown } = useHorizontalScroll()
-  const loadMoreRef = useRef(null)
   const categorySectionRef = useRef(null)
 
   // ── 타이핑 플레이스홀더 ─────────────────────────────
@@ -370,21 +411,9 @@ export default function Home() {
 
   const hasMore = visibleCount < filteredProducts.length
 
-  // ── 무한 스크롤 (IntersectionObserver) ──────────────
-  useEffect(() => {
-    const el = loadMoreRef.current
-    if (!el) return
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && hasMore) {
-          setVisibleCount((prev) => prev + ITEMS_PER_PAGE)
-        }
-      },
-      { threshold: 0.1 }
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [hasMore])
+  const onLoadMore = useCallback(() => {
+    setVisibleCount((prev) => prev + ITEMS_PER_PAGE)
+  }, [])
 
   // 탭 변경 시 visibleCount 리셋
   useEffect(() => {
@@ -546,7 +575,7 @@ export default function Home() {
 
             {/* Category Grid */}
             {allCategories.length > 1 && (
-              <section className="mt-12" ref={categorySectionRef}>
+              <section id="category-section" className="mt-12" ref={categorySectionRef}>
                 <div ref={categoryRef} onMouseDown={onCategoryMouseDown} className="-mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar select-none cursor-grab active:cursor-grabbing">
                   {allCategories.map((cat, i) => (
                     <button key={cat} onClick={() => setActiveTab(cat)}
@@ -557,25 +586,13 @@ export default function Home() {
                   ))}
                 </div>
                 {effectiveTab && filteredProducts.length > 0 && (
-                  <div className="mt-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      {filteredProducts.slice(0, visibleCount).map((p, i) => {
-                        const isNewBatch = i >= visibleCount - ITEMS_PER_PAGE
-                        return (
-                          <div key={p.code}
-                               className={isNewBatch ? 'opacity-0' : ''}
-                               style={isNewBatch ? { animation: 'slide-up 0.7s ease-out forwards', animationDelay: `${(i % ITEMS_PER_PAGE) * 120}ms` } : undefined}>
-                            <ProductCard product={p} onClickProduct={handleClickProduct} />
-                          </div>
-                        )
-                      })}
-                    </div>
-                    {hasMore && (
-                      <div ref={loadMoreRef} className="mt-6">
-                        <SkeletonGrid />
-                      </div>
-                    )}
-                  </div>
+                  <InfiniteProductGrid
+                    filteredProducts={filteredProducts}
+                    visibleCount={visibleCount}
+                    hasMore={hasMore}
+                    onLoadMore={onLoadMore}
+                    onClickProduct={handleClickProduct}
+                  />
                 )}
               </section>
             )}

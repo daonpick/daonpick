@@ -40,6 +40,11 @@ export default function Sidebar({ open, onClose, categories, onSelectCategory })
   const handleCategory = (cat) => {
     onSelectCategory(cat)
     onClose()
+    setTimeout(() => {
+      document.body.style.overflow = ''
+      const el = document.getElementById('category-section')
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 500)
   }
 
   return (
