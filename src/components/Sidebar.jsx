@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { X, Clock, Heart, Grid3X3, Share2, Megaphone } from 'lucide-react'
+import { X, Clock, Heart, Grid3X3, Share2, Briefcase } from 'lucide-react'
 import { useStore } from '../store/useStore'
 
 const TALLY_FORM_ID = 'jayQoY'
@@ -136,7 +136,12 @@ export default function Sidebar({ open, onClose, categories, onSelectCategory })
           </div>
 
           {/* Footer */}
-          <div className="px-5 py-4 border-t border-gray-100 space-y-2">
+          <div className="mt-auto px-5 py-4 pt-6 border-t border-gray-100 flex flex-col gap-3">
+            <button onClick={handleShare}
+                    className="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-600 font-bold py-3 rounded-xl hover:bg-gray-200 transition-colors">
+              <Share2 size={18} />
+              <span>친구에게 공유하기</span>
+            </button>
             <button onClick={() => {
                       if (window.Tally) {
                         window.Tally.openPopup(TALLY_FORM_ID, {
@@ -149,15 +154,13 @@ export default function Sidebar({ open, onClose, categories, onSelectCategory })
                         window.open(`https://tally.so/r/${TALLY_FORM_ID}`, '_blank')
                       }
                     }}
-                    className="w-full flex items-center justify-center gap-2 bg-[#F37021]/10 text-[#F37021] font-bold py-3 rounded-xl hover:bg-[#F37021]/20 transition-all">
-              <Megaphone className="w-4 h-4 shrink-0" />
-              비즈니스 제휴 문의
+                    className="w-full flex items-center justify-center gap-2 bg-[#F37021]/10 text-[#F37021] font-bold py-3 rounded-xl hover:bg-[#F37021]/20 transition-colors">
+              <Briefcase size={18} />
+              <span>비즈니스 제휴문의</span>
             </button>
-            <button onClick={handleShare}
-                    className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-[#191F28] hover:bg-gray-50 active:bg-gray-100 transition-colors">
-              <Share2 className="w-4 h-4 text-[#F37021] shrink-0" />
-              공유하기
-            </button>
+            <p className="text-[10px] text-center text-gray-400 mt-2">
+              다온픽 &copy; 2026. All rights reserved.
+            </p>
           </div>
         </div>
       </div>
