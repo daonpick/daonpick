@@ -1,38 +1,50 @@
 <!DOCTYPE html>
 <html lang="ko">
   <head>
-      <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-JN5J2SJLXG"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
+    <!-- 1. Google Analytics (GA4) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JN5J2SJLXG"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
 
-    gtag('config', 'G-JN5J2SJLXG');
-  </script>
+      gtag('config', 'G-JN5J2SJLXG');
+    </script>
+
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <!-- 검색 엔진 및 공유 설정 (SEO & Open Graph) -->
+    <!-- 2. 검색 엔진 최적화 (SEO) -->
     <title>다온픽 | 영상 속 그 제품, 번호로 찾으세요</title>
-    <meta name="description" content="유튜브, 쇼츠 꿀템 정보를 번호 하나로 쉽고 빠르게 확인하세요." />
+    <meta name="description" content="유튜브, 쇼츠 꿀템 정보를 번호 하나로 쉽고 빠르게 확인하세요. 실패 없는 큐레이션 쇼핑 플랫폼 다온픽." />
+    <meta name="keywords" content="다온픽, 꿀템, 주방용품, 생활용품, 인테리어, 유튜브공동구매, 쇼츠아이템, 큐레이션" />
+    <link rel="canonical" href="https://daonpick.com" />
 
+    <!-- 3. 소유권 확인 (Google & Naver) -->
+    <meta name="google-site-verification" content="cK2ydV7FxbFrBLwTwmEWgLci-uX0oSsM6QbpqGKr0PE" />
+    <meta name="naver-site-verification" content="a3b06941bfb80b9a62226825e9b026524e76da09" />
+
+    <!-- 4. SNS 공유 설정 (Open Graph) -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="다온픽 (Daon Pick)" />
-    <meta property="og:description" content="번호만 입력하면 상품 정보가 딱! 지금 핫한 제품 확인하기" />
-    <meta property="og:image" content="/og-image.jpg" />
     <meta property="og:url" content="https://daonpick.com" />
+    <meta property="og:title" content="다온픽 (Daon Pick) | 영상 속 그 제품 찾기" />
+    <meta property="og:description" content="번호만 입력하면 상품 정보가 딱! 지금 핫한 꿀템을 확인해보세요." />
+    <meta property="og:image" content="/og-image.jpg" />
+    <meta property="og:site_name" content="다온픽" />
+    
+    <!-- 5. Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="다온픽 (Daon Pick)" />
+    <meta name="twitter:description" content="영상 속 꿀템 정보, 다온픽에서 번호로 쉽게 찾으세요." />
+    <meta name="twitter:image" content="/og-image.jpg" />
+
+    <!-- 6. 외부 스크립트 (Tally 팝업) -->
+    <script async src="https://tally.so/widgets/embed.js"></script>
 
     <style>
       /* 폰트나 기본 스타일이 필요하면 여기에 추가 가능합니다 */
     </style>
-    <script async src="https://tally.so/widgets/embed.js"></script>
-     <!-- 구글 서치 콘솔 태그는 여기에 넣으세요 (HEAD 안쪽) -->
-    <meta name="google-site-verification" content="cK2ydV7FxbFrBLwTwmEWgLci-uX0oSsM6QbpqGKr0PE" />
-     <!-- 네이버 서치어드바이저 태그도 있다면 바로 아랫줄에 같이 넣으세요 -->
-    <meta name="naver-site-verification" content="a3b06941bfb80b9a62226825e9b026524e76da09" />
   </head>
   <body>
     <div id="root"></div>
