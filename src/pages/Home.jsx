@@ -559,13 +559,16 @@ export default function Home() {
                 {effectiveTab && filteredProducts.length > 0 && (
                   <div className="mt-6">
                     <div className="grid grid-cols-2 gap-4">
-                      {filteredProducts.slice(0, visibleCount).map((p, i) => (
-                        <div key={p.code}
-                             className="opacity-0"
-                             style={{ animation: 'slide-up 0.7s ease-out forwards', animationDelay: `${(i % ITEMS_PER_PAGE) * 50}ms` }}>
-                          <ProductCard product={p} onClickProduct={handleClickProduct} />
-                        </div>
-                      ))}
+                      {filteredProducts.slice(0, visibleCount).map((p, i) => {
+                        const isNewBatch = i >= visibleCount - ITEMS_PER_PAGE
+                        return (
+                          <div key={p.code}
+                               className={isNewBatch ? 'opacity-0' : ''}
+                               style={isNewBatch ? { animation: 'slide-up 0.7s ease-out forwards', animationDelay: `${(i % ITEMS_PER_PAGE) * 120}ms` } : undefined}>
+                            <ProductCard product={p} onClickProduct={handleClickProduct} />
+                          </div>
+                        )
+                      })}
                     </div>
                     {hasMore && (
                       <div ref={loadMoreRef} className="mt-6">
