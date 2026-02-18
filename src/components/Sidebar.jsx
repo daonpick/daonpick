@@ -42,10 +42,17 @@ export default function Sidebar({ open, onClose, categories, onSelectCategory })
     onClose()
     setTimeout(() => {
       document.body.style.overflow = ''
-      const el = document.getElementById('category-section')
-      if (el) {
-        const y = el.getBoundingClientRect().top + window.pageYOffset - 60
+      const section = document.getElementById('category-section')
+      if (section) {
+        const y = section.getBoundingClientRect().top + window.pageYOffset - 60
         window.scrollTo({ top: y, behavior: 'smooth' })
+      }
+      // 선택된 탭을 가로 스크롤 중앙으로 이동
+      const activeBtn = document.querySelector('[data-category-tab].active-tab')
+      if (activeBtn && activeBtn.parentElement) {
+        const container = activeBtn.parentElement
+        const scrollLeft = activeBtn.offsetLeft - container.offsetWidth / 2 + activeBtn.offsetWidth / 2
+        container.scrollTo({ left: scrollLeft, behavior: 'smooth' })
       }
     }, 500)
   }
