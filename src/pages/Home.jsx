@@ -188,7 +188,8 @@ function RankingCard({ product, rank, onClickProduct, badge, isDragged }) {
       <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-sm">
         <img src={product.image} alt={product.name} draggable={false} className="w-full h-full object-cover group-active:scale-[0.96] transition-transform pointer-events-none" />
         {badge && (
-          <span className="badge-shimmer absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-white/90 backdrop-blur text-[#F37021] font-bold text-[10px]">
+          <span className="badge-shimmer absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-white/90 backdrop-blur text-[#F37021] font-bold text-[10px]"
+                style={{ '--shimmer-delay': `${(rank - 1) * 0.8}s` }}>
             <span className="relative z-10">{badge}</span>
           </span>
         )}

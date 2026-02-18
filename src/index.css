@@ -51,6 +51,7 @@
     transparent 70%
   );
   animation: shimmer 2.5s ease-in-out infinite;
+  animation-delay: var(--shimmer-delay, 0s);
   pointer-events: none;
 }
 
