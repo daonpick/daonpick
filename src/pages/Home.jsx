@@ -4,6 +4,7 @@ import { Search, Eye, ChevronDown, ChevronLeft, ChevronRight, ArrowRight, Menu, 
 import { supabase } from '../supabaseClient'
 import { useStore } from '../store/useStore'
 import Sidebar from '../components/Sidebar'
+import LuckyCard from '../components/LuckyCard'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 0. 가로 스크롤 (화살표 + 드래그 + 휠)
@@ -485,6 +486,11 @@ export default function Home() {
                   ))}
                 </div>
               </section>
+            )}
+
+            {/* Lucky Pick */}
+            {products.length > 0 && (
+              <LuckyCard products={products} onClickProduct={handleClickProduct} />
             )}
 
             {/* Category Grid */}
