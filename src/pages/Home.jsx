@@ -107,9 +107,16 @@ const BADGE_TEMPLATES = [
   () => '🏆 MD 강력 추천',
 ]
 
-const getRandomBadge = () => {
-  return BADGE_TEMPLATES[Math.floor(Math.random() * BADGE_TEMPLATES.length)]()
+function shuffle(arr) {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
 }
+
+const getUniqueBadges = () => shuffle(BADGE_TEMPLATES).slice(0, 3).map((fn) => fn())
 
 const fetchCSV = (url) => {
   return new Promise((resolve) => {
@@ -322,7 +329,7 @@ export default function Home() {
         views: viewsMap.get(String(p.code)) ?? 0,
       }))
 
-      setProducts(merged)
+      setProducts(shuffle(merged))
       setLoading(false)
     }
     load()
@@ -351,7 +358,7 @@ export default function Home() {
   }, [])
 
   // ── TOP3 뱃지 (새로고침 시 랜덤) ──────────────────
-  const badges = useMemo(() => [getRandomBadge(), getRandomBadge(), getRandomBadge()], [])
+  const badges = useMemo(() => getUniqueBadges(), [])
 
   // ── 클릭 핸들러 (GA4 + Supabase Await + 최근 본 상품 + 이동) ──
   const handleClickProduct = useCallback(async (product) => {
