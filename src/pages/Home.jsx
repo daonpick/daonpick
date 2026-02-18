@@ -184,16 +184,18 @@ function RankingCard({ product, rank, onClickProduct, badge, isDragged }) {
   const wishlisted = isWishlisted(product.code)
 
   return (
-    <div onClick={() => { if (!isDragged || !isDragged()) onClickProduct(product) }} className="shrink-0 w-40 text-left group cursor-pointer">
+    <div onClick={() => { if (!isDragged || !isDragged()) onClickProduct(product) }}
+         className="shrink-0 w-40 text-left cursor-pointer select-none active:scale-[0.97] transition-transform"
+         style={{ WebkitTouchCallout: 'none' }}>
       <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-sm">
-        <img src={product.image} alt={product.name} draggable={false} className="w-full h-full object-cover group-active:scale-[0.96] transition-transform pointer-events-none" />
+        <img src={product.image} alt={product.name} draggable={false} className="w-full h-full object-cover pointer-events-none" />
         {badge && (
           <span className="badge-shimmer absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-white/90 backdrop-blur text-[#F37021] font-bold text-[10px]"
                 style={{ '--shimmer-delay': `${(rank - 1) * 0.8}s` }}>
             <span className="relative z-10">{badge}</span>
           </span>
         )}
-        <div className="absolute top-2 right-2" onClick={(e) => { e.stopPropagation(); toggleWishlist(product) }}>
+        <div className="absolute top-2 right-2 z-10" onClick={(e) => { e.stopPropagation(); toggleWishlist(product) }}>
           <Heart className={`w-5 h-5 drop-shadow-lg transition-colors ${wishlisted ? 'text-red-500 fill-red-500' : 'text-white/80'}`} />
         </div>
         <span className="absolute bottom-1 left-2 text-6xl font-black italic leading-none tracking-tighter text-[#F37021]"

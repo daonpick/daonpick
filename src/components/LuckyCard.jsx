@@ -76,7 +76,7 @@ export default function LuckyCard({ products, onClickProduct }) {
           <div className="flex flex-row h-40">
             {/* Left — image */}
             <div className="w-2/5 bg-gray-100 overflow-hidden relative shrink-0">
-              <img src={luckyItem.image} alt={luckyItem.name} className="w-full h-full object-cover" />
+              <img src={luckyItem.image} alt={luckyItem.name} draggable={false} className="w-full h-full object-cover pointer-events-none" />
               <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-[#F37021] text-white text-[9px] font-bold">
                 Lucky ✨
               </span>
@@ -122,7 +122,8 @@ export default function LuckyCard({ products, onClickProduct }) {
             <div
               key={item.code}
               onClick={() => handlePick(idx)}
-              className={`transition-all duration-300 ease-out ${isPicked ? 'col-span-3' : 'cursor-pointer'}`}
+              className={`select-none transition-all duration-300 ease-out ${isPicked ? 'col-span-3' : 'cursor-pointer active:scale-[0.95]'}`}
+              style={{ WebkitTouchCallout: 'none' }}
             >
               <div className={`relative rounded-2xl overflow-hidden shadow-lg bg-gradient-to-b from-[#F37021] via-[#FF8F50] to-[#F37021] flex flex-col items-center justify-center ${isPicked ? 'py-8' : 'aspect-[3/4]'}`}>
                 {/* Diamond pattern */}
