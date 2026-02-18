@@ -199,13 +199,9 @@ function RankingCard({ product, rank, onClickProduct, badge, isDragged }) {
         </div>
         <span className="absolute bottom-1 left-2 text-6xl font-black italic leading-none tracking-tighter"
               style={{
-                background: rank === 1 ? 'linear-gradient(180deg, #FFD700, #FFA500)'
-                  : rank === 2 ? 'linear-gradient(180deg, #E8E8E8, #C0C0C0)'
-                  : rank === 3 ? 'linear-gradient(180deg, #E8A862, #CD7F32)'
-                  : 'linear-gradient(180deg, #FFFFFF, #E0E0E0)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                WebkitTextStroke: rank <= 3 ? '1px rgba(0,0,0,0.15)' : '1.5px rgba(0,0,0,0.3)',
+                color: '#F37021',
+                WebkitTextStroke: '2px rgba(255,255,255,0.85)',
+                paintOrder: 'stroke fill',
                 filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
               }}>
           {rank}
