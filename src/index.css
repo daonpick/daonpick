@@ -38,7 +38,6 @@
 }
 
 .badge-shimmer {
-  position: relative;
   overflow: hidden;
 }
 .badge-shimmer::after {
