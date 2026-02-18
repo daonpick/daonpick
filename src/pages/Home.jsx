@@ -197,8 +197,14 @@ function RankingCard({ product, rank, onClickProduct, badge, isDragged }) {
         <div className="absolute top-2 right-2 z-10" onClick={(e) => { e.stopPropagation(); toggleWishlist(product) }}>
           <Heart className={`w-5 h-5 drop-shadow-lg transition-colors ${wishlisted ? 'text-red-500 fill-red-500' : 'text-white/80'}`} />
         </div>
-        <span className="absolute bottom-1 left-2 text-6xl font-black italic leading-none tracking-tighter text-[#F37021]"
-              style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.2))' }}>
+        <span className="absolute bottom-1 left-2 text-6xl font-black italic leading-none tracking-tighter"
+              style={{
+                background: 'linear-gradient(180deg, #F37021, #FF8F50)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                WebkitTextStroke: '1.5px rgba(255,255,255,0.9)',
+                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
+              }}>
           {rank}
         </span>
       </div>
