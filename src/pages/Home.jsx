@@ -312,6 +312,7 @@ export default function Home() {
   const { ref: categoryRef, onMouseDown: onCategoryMouseDown } = useHorizontalScroll()
   const { ref: navRef, onMouseDown: onNavMouseDown } = useHorizontalScroll()
   const categorySectionRef = useRef(null)
+  const categoryTabRef = useRef(null)
   const navSectionRef = useRef(null)
 
   // ── 타이핑 플레이스홀더 ─────────────────────────────
@@ -435,7 +436,7 @@ export default function Home() {
   }, [loading])
 
   useEffect(() => {
-    const el = categorySectionRef.current
+    const el = categoryTabRef.current
     if (!el) return
     const observer = new IntersectionObserver(
       ([entry]) => setCategoryVisible(entry.isIntersecting),
@@ -584,7 +585,7 @@ export default function Home() {
             {/* Category Grid */}
             {allCategories.length > 1 && (
               <section id="category-section" className="mt-12" ref={categorySectionRef}>
-                <div ref={categoryRef} onMouseDown={onCategoryMouseDown} className="-mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar select-none cursor-grab active:cursor-grabbing">
+                <div ref={(el) => { categoryRef.current = el; categoryTabRef.current = el }} onMouseDown={onCategoryMouseDown} className="-mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar select-none cursor-grab active:cursor-grabbing">
                   {allCategories.map((cat, i) => (
                     <button key={cat} onClick={() => setActiveTab(cat)}
                             className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-all duration-700 ease-out ${effectiveTab === cat ? 'bg-gradient-to-r from-[#F37021] to-[#FF8F50] text-white' : 'bg-gray-100 text-gray-500'} ${categoryVisible ? '' : 'opacity-0 translate-y-4'}`}
