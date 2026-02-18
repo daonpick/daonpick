@@ -8,7 +8,12 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(npm run dev:*)",
-      "WebFetch(domain:daonpick.vercel.app)"
+      "WebFetch(domain:daonpick.vercel.app)",
+      "Bash(npx vite build)",
+      "Bash(curl:*)",
+      "Bash(grep:*)",
+      "Bash(tasklist:*)",
+      "Bash(vercel env:*)"
     ]
   }
 }
