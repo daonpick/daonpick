@@ -47,10 +47,11 @@
   background: linear-gradient(
     105deg,
     transparent 30%,
-    rgba(255,255,255,0.5) 50%,
+    rgba(243,112,33,0.18) 50%,
     transparent 70%
   );
   animation: shimmer 2.5s ease-in-out infinite;
+  pointer-events: none;
 }
 
 /* ─── Pulse Glow: CTA 버튼 ─── */
