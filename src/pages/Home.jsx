@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import Papa from 'papaparse'
-import { Search, Eye, ChevronDown, ChevronLeft, ChevronRight, ArrowRight, Menu, Heart } from 'lucide-react'
+import { Search, Eye, ChevronLeft, ChevronRight, ArrowRight, Menu, Heart } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useStore } from '../store/useStore'
 import Sidebar from '../components/Sidebar'
@@ -143,8 +143,7 @@ const DUMMY_SETTINGS = [
   { type: 'fallback', label: 'fallback', url: 'https://example.com/event' },
 ]
 
-const INITIAL_COUNT = 4
-const LOAD_MORE_STEP = 6
+const ITEMS_PER_PAGE = 10
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 3. 서브 컴포넌트 (스켈레톤 및 카드)
@@ -258,16 +257,19 @@ export default function Home() {
   const [settings, setSettings] = useState(DUMMY_SETTINGS)
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
-  const [visibleCounts, setVisibleCounts] = useState({})
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE)
   const [activeTab, setActiveTab] = useState(undefined)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [inputFocused, setInputFocused] = useState(false)
   const [typedText, setTypedText] = useState('')
+  const [categoryVisible, setCategoryVisible] = useState(false)
 
   const { addRecentView } = useStore()
   const { ref: rankingRef, canScrollLeft, canScrollRight, scrollDir, isDragged, onMouseDown: onRankingMouseDown } = useHorizontalScroll()
   const { ref: categoryRef, onMouseDown: onCategoryMouseDown } = useHorizontalScroll()
   const { ref: navRef, onMouseDown: onNavMouseDown } = useHorizontalScroll()
+  const loadMoreRef = useRef(null)
+  const categorySectionRef = useRef(null)
 
   // ── 타이핑 플레이스홀더 ─────────────────────────────
   const PLACEHOLDER_PHRASES = useMemo(() => [
@@ -359,10 +361,51 @@ export default function Home() {
   }, [products])
 
   const effectiveTab = activeTab !== undefined ? activeTab : categories[0] ?? null
-  const getVisible = useCallback((key) => visibleCounts[key] ?? INITIAL_COUNT, [visibleCounts])
-  const handleLoadMore = useCallback((key) => {
-    setVisibleCounts((prev) => ({ ...prev, [key]: (prev[key] ?? INITIAL_COUNT) + LOAD_MORE_STEP }))
-  }, [])
+
+  const filteredProducts = useMemo(() => {
+    if (!effectiveTab) return []
+    return products.filter((p) => p.category === effectiveTab)
+  }, [products, effectiveTab])
+
+  const hasMore = visibleCount < filteredProducts.length
+
+  // ── 무한 스크롤 (IntersectionObserver) ──────────────
+  useEffect(() => {
+    const el = loadMoreRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMore) {
+          setVisibleCount((prev) => prev + ITEMS_PER_PAGE)
+        }
+      },
+      { threshold: 0.1 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasMore])
+
+  // 탭 변경 시 visibleCount 리셋
+  useEffect(() => {
+    setVisibleCount(ITEMS_PER_PAGE)
+  }, [effectiveTab])
+
+  // ── 카테고리 섹션 스크롤 감지 ──────────────────────
+  useEffect(() => {
+    const el = categorySectionRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setCategoryVisible(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.2 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [loading])
 
   // ── TOP3 뱃지 (새로고침 시 랜덤) ──────────────────
   const badges = useMemo(() => getUniqueBadges(), [])
@@ -502,34 +545,34 @@ export default function Home() {
 
             {/* Category Grid */}
             {categories.length > 0 && (
-              <section className="mt-12">
+              <section className="mt-12" ref={categorySectionRef}>
                 <div ref={categoryRef} onMouseDown={onCategoryMouseDown} className="-mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar select-none cursor-grab active:cursor-grabbing">
-                  {categories.map((cat) => (
+                  {categories.map((cat, i) => (
                     <button key={cat} onClick={() => setActiveTab(cat)}
-                            className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-colors ${effectiveTab === cat ? 'bg-gradient-to-r from-[#F37021] to-[#FF8F50] text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-all duration-700 ease-out ${effectiveTab === cat ? 'bg-gradient-to-r from-[#F37021] to-[#FF8F50] text-white' : 'bg-gray-100 text-gray-500'} ${categoryVisible ? '' : 'opacity-0 translate-y-4'}`}
+                            style={categoryVisible ? { animation: 'slide-up 0.7s ease-out forwards', animationDelay: `${i * 150}ms`, opacity: 0 } : undefined}>
                       {cat}
                     </button>
                   ))}
                 </div>
-                {effectiveTab && (() => {
-                  const filtered = products.filter((p) => p.category === effectiveTab)
-                  const visible = getVisible(effectiveTab)
-                  return (
-                    <div className="mt-6">
-                      <div className="grid grid-cols-2 gap-4">
-                        {filtered.slice(0, visible).map((p) => (
-                          <ProductCard key={p.code} product={p} onClickProduct={handleClickProduct} />
-                        ))}
-                      </div>
-                      {visible < filtered.length && (
-                        <button onClick={() => handleLoadMore(effectiveTab)}
-                                className="mt-6 w-full py-3 rounded-2xl bg-white text-[14px] font-semibold text-[#F37021] flex items-center justify-center gap-1 active:scale-[0.98] transition-transform shadow-sm">
-                          더보기 <ChevronDown className="w-4 h-4" />
-                        </button>
-                      )}
+                {effectiveTab && filteredProducts.length > 0 && (
+                  <div className="mt-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      {filteredProducts.slice(0, visibleCount).map((p, i) => (
+                        <div key={p.code}
+                             className="opacity-0"
+                             style={{ animation: 'slide-up 0.5s ease-out forwards', animationDelay: `${(i % ITEMS_PER_PAGE) * 80}ms` }}>
+                          <ProductCard product={p} onClickProduct={handleClickProduct} />
+                        </div>
+                      ))}
                     </div>
-                  )
-                })()}
+                    {hasMore && (
+                      <div ref={loadMoreRef} className="mt-6">
+                        <SkeletonGrid />
+                      </div>
+                    )}
+                  </div>
+                )}
               </section>
             )}
           </>
