@@ -82,16 +82,9 @@ export default function LuckyCard({ products, onClickProduct }) {
               </span>
             </div>
             {/* Right — info */}
-            <div className="w-3/5 flex flex-col justify-between p-3 relative">
-              <button
-                onClick={reset}
-                className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 active:text-gray-500 active:bg-gray-100 transition-colors"
-                title="다시 뽑기"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-              </button>
+            <div className="w-3/5 flex flex-col justify-between p-3">
               <div>
-                <p className="text-[13px] font-bold text-[#191F28] leading-tight truncate pr-7">{luckyItem.name}</p>
+                <p className="text-[13px] font-bold text-[#191F28] leading-tight truncate">{luckyItem.name}</p>
                 <p className="text-[11px] text-[#F37021] font-medium leading-snug mt-1.5 line-clamp-2">{message}</p>
               </div>
               <button
