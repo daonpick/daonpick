@@ -562,7 +562,7 @@ export default function Home() {
                       {filteredProducts.slice(0, visibleCount).map((p, i) => (
                         <div key={p.code}
                              className="opacity-0"
-                             style={{ animation: 'slide-up 0.5s ease-out forwards', animationDelay: `${(i % ITEMS_PER_PAGE) * 80}ms` }}>
+                             style={{ animation: 'slide-up 0.7s ease-out forwards', animationDelay: `${(i % ITEMS_PER_PAGE) * 50}ms` }}>
                           <ProductCard product={p} onClickProduct={handleClickProduct} />
                         </div>
                       ))}
