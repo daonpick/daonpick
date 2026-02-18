@@ -135,8 +135,8 @@ const fetchCSV = (url) => {
 // 2. 초기 데이터 (더미 & 설정)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const DUMMY_PRODUCTS = [
-  { id: '1', code: '10024', name: '무선 야채 다지기', category: '주방용품', price: '23900', link: 'https://example.com', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10024' },
-  { id: '2', code: '10025', name: '규조토 발매트', category: '생활잡화', price: '15900', link: 'https://example.com', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10025' },
+  { id: '1', code: '10024', name: '무선 야채 다지기', category: '주방용품', link: 'https://example.com', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10024' },
+  { id: '2', code: '10025', name: '규조토 발매트', category: '생활잡화', link: 'https://example.com', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10025' },
 ]
 
 const DUMMY_SETTINGS = [
