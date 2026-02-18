@@ -394,14 +394,18 @@ export default function Home() {
   const fallbackUrl = useMemo(() => settings.find((s) => s.type === 'fallback')?.url || '#', [settings])
   const topProducts = useMemo(() => [...products].sort((a, b) => (b.views ?? 0) - (a.views ?? 0)).slice(0, 10), [products])
 
+  const CATEGORY_ORDER = [
+    '주방용품', '생활용품', '가전디지털', '인테리어',
+    '반려용품', '뷰티', '식품', '완구/취미', '자동차용품',
+  ]
+  const CATEGORY_EMOJI = {
+    '주방용품': '🍽️', '생활용품': '🧺', '가전디지털': '🎧', '인테리어': '🕯️',
+    '반려용품': '🐾', '뷰티': '🧴', '식품': '🍷', '완구/취미': '🛹', '자동차용품': '🏎️',
+  }
+
   const categories = useMemo(() => {
-    const seen = new Set(); const list = []
-    for (const p of products) {
-      if (p.category && !seen.has(p.category)) {
-        seen.add(p.category); list.push(p.category)
-      }
-    }
-    return list
+    const existing = new Set(products.map((p) => p.category))
+    return CATEGORY_ORDER.filter((cat) => existing.has(cat))
   }, [products])
 
   const allCategories = useMemo(() => ['전체', ...categories], [categories])
@@ -591,7 +595,7 @@ export default function Home() {
                             data-category-tab
                             className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-all duration-700 ease-out ${effectiveTab === cat ? 'bg-gradient-to-r from-[#F37021] to-[#FF8F50] text-white active-tab' : 'bg-gray-100 text-gray-500'} ${categoryVisible ? '' : 'opacity-0 translate-y-4'}`}
                             style={categoryVisible ? { animation: 'slide-up 0.7s ease-out forwards', animationDelay: `${i * 150}ms`, opacity: 0 } : undefined}>
-                      {cat}
+                      {cat === '전체' ? cat : `${CATEGORY_EMOJI[cat] || ''}${cat}`}
                     </button>
                   ))}
                 </div>

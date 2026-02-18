@@ -4,6 +4,11 @@ import { useStore } from '../store/useStore'
 
 const TALLY_FORM_ID = 'jayQoY'
 
+const CATEGORY_EMOJI = {
+  '주방용품': '🍽️', '생활용품': '🧺', '가전디지털': '🎧', '인테리어': '🕯️',
+  '반려용품': '🐾', '뷰티': '🧴', '식품': '🍷', '완구/취미': '🛹', '자동차용품': '🏎️',
+}
+
 export default function Sidebar({ open, onClose, categories, onSelectCategory }) {
   const { recentViews, wishlist } = useStore()
   const [toast, setToast] = useState(false)
@@ -134,7 +139,7 @@ export default function Sidebar({ open, onClose, categories, onSelectCategory })
                   {categories.map((cat) => (
                     <button key={cat} onClick={() => handleCategory(cat)}
                             className="px-3 py-1.5 rounded-full bg-gray-100 text-[13px] font-medium text-gray-600 active:scale-95 transition-transform">
-                      {cat}
+                      {`${CATEGORY_EMOJI[cat] || ''}${cat}`}
                     </button>
                   ))}
                 </div>
