@@ -43,7 +43,10 @@ export default function Sidebar({ open, onClose, categories, onSelectCategory })
     setTimeout(() => {
       document.body.style.overflow = ''
       const el = document.getElementById('category-section')
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      if (el) {
+        const y = el.getBoundingClientRect().top + window.pageYOffset - 60
+        window.scrollTo({ top: y, behavior: 'smooth' })
+      }
     }, 500)
   }
 
