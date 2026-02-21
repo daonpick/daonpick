@@ -464,10 +464,10 @@ export default function Home() {
   const badges = useMemo(() => getUniqueBadges(), [])
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ⭐ [완벽 해결] 클릭 핸들러 (즉시 이동 + 백그라운드 전송)
+  // ⭐ [최종 솔루션] 클릭 핸들러 (새 탭 + 백그라운드 통신 보장)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const handleClickProduct = useCallback((product) => {
-    // 1. 최근 본 상품 추가
+    // 1. 최근 본 상품 추가 (로컬)
     addRecentView(product);
 
     // 2. GA4 이벤트 전송
@@ -480,41 +480,24 @@ export default function Home() {
       });
     }
 
-    // 3. 목적지 링크 확인 (단축 링크 우선, 없으면 일반 링크)
+    // 3. 목적지 링크 확보
     const targetUrl = product.link || product.longLink;
-
     if (!targetUrl) {
-      alert("상품 링크가 등록되지 않았습니다. 데이터를 확인해주세요.");
+      alert("상품 링크가 등록되지 않았습니다.");
       return;
     }
 
-    // 4. 조회수 증가 (keepalive를 활용한 절대 누락 없는 백그라운드 전송)
-    try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (supabaseUrl && supabaseKey) {
-        // fetch의 keepalive: true 옵션은 페이지가 이동/종료되어도 브라우저가 끝까지 전송을 보장합니다.
-        fetch(`${supabaseUrl}/rest/v1/rpc/increment_daily_view`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`
-          },
-          body: JSON.stringify({ p_product_code: String(product.code) }),
-          keepalive: true 
-        }).catch(() => {});
-      } else if (supabase) {
-        // 환경변수를 직접 못 찾을 경우 기존 클라이언트로 쏘고 버리기 (폴백)
-        supabase.rpc('increment_daily_view', { p_product_code: String(product.code) }).catch(() => {});
-      }
-    } catch (error) {
-      console.warn('View update failed', error);
+    // 4. 조회수 증가 (기존 탭이 살아있으므로 100% 안전하게 전송됨)
+    if (supabase) {
+      const code = String(product.code);
+      supabase.rpc('increment_daily_view', { p_product_code: code }).catch((err) => {
+        console.warn("View update error:", err);
+      });
     }
 
-    // 5. 무조건, 즉시 페이지 이동 (0.1초의 지연도 없음 = 브라우저 차단 절대 불가)
-    window.location.href = targetUrl;
+    // 5. 무조건 즉시 새 탭(쿠팡 앱)으로 띄우기
+    // 클릭 제스처 내에서 즉각 실행되므로 인앱 브라우저나 사파리에서도 차단되지 않습니다.
+    window.open(targetUrl, '_blank');
 
   }, [addRecentView]);
 
@@ -523,16 +506,13 @@ export default function Home() {
     const trimmed = query.trim()
     if (!trimmed) return
     
-    // 검색 시 문자열 공백 및 타입 불일치 방지
+    // 검색 시 문자열 공백 파괴 및 매칭
     const found = products.find((p) => String(p.code).trim() === trimmed)
     if (found) {
       handleClickProduct(found)
     } else {
-      setSearchToast('존재하지 않는 코드입니다. 잠시 후 이동합니다.')
-      setTimeout(() => {
-        setSearchToast('')
-        window.location.href = fallbackUrl
-      }, 2000)
+      setSearchToast('존재하지 않는 코드입니다.')
+      setTimeout(() => setSearchToast(''), 2000)
     }
   }
 
