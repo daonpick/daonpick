@@ -464,7 +464,7 @@ export default function Home() {
   const badges = useMemo(() => getUniqueBadges(), [])
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ⭐ [최종 완성본] 클릭 핸들러 (방해물 100% 제거 완료)
+  // ⭐ [진단 모드] 클릭 핸들러 (완전 해결 전까지 팝업 유지)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const handleClickProduct = useCallback(async (product) => {
     addRecentView(product);
@@ -479,19 +479,34 @@ export default function Home() {
     }
 
     let targetUrl = product.link || product.shortLink || product.longLink;
-    if (!targetUrl) return;
+    if (!targetUrl) {
+      alert("상품 링크가 없습니다.");
+      return;
+    }
     if (!targetUrl.startsWith('http')) targetUrl = 'https://' + targetUrl;
 
-    if (supabase) {
+    // 💡 1. 클라이언트 생성 실패 검사 (환경변수 누락)
+    if (!supabase) {
+      alert("🚨 에러 1: Supabase 클라이언트가 없습니다.\nVercel 환경변수(URL 또는 KEY)가 비어있습니다.");
+    } else {
       try {
-        // 이제 찌꺼기 없는 깨끗한 키로 무사통과! (약 0.05초 소요)
-        await supabase.rpc('increment_daily_view', { p_product_code: String(product.code) });
+        // 💡 2. 서버 통신 시도
+        const { error } = await supabase.rpc('increment_daily_view', { p_product_code: String(product.code) });
+        
+        // 💡 3. 서버에서 거절한 경우 (SQL 오류, 권한 문제 등)
+        if (error) {
+          alert("🚨 에러 2 (DB 거절):\n" + error.message + "\n상세: " + JSON.stringify(error));
+        } else {
+          // 성공 여부도 알고 싶다면 아래 주석을 해제하셔도 됩니다.
+          // alert("✅ 성공! DB에 저장되었습니다.");
+        }
       } catch (err) {
-        // 만약의 경우에도 사용자는 이동시켜야 하므로 무시하고 진행
+        // 💡 4. 통신 자체가 실패한 경우 (Header 오류, 네트워크 단절 등)
+        alert("🚨 에러 3 (네트워크/코드):\n" + err.message);
       }
     }
 
-    // 통신 완료 후 쾌속 이동
+    // 팝업 확인 후 이동
     window.location.href = targetUrl;
 
   }, [addRecentView]);
