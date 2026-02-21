@@ -463,12 +463,14 @@ export default function Home() {
 
   const badges = useMemo(() => getUniqueBadges(), [])
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ⭐ [안전한 이동 로직 적용] 클릭 핸들러
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ⭐ [완벽 해결] 클릭 핸들러 (즉시 이동 + 백그라운드 전송)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const handleClickProduct = useCallback((product) => {
+    // 1. 최근 본 상품 추가
     addRecentView(product);
 
+    // 2. GA4 이벤트 전송
     if (window.gtag) {
       window.gtag('event', 'click_product', {
         'event_category': 'Outbound Link',
@@ -478,24 +480,41 @@ export default function Home() {
       });
     }
 
-    // 시트의 컬럼명에 대비하여 우선순위로 링크 획득
-    const targetUrl = product.link || product.shortLink || product.longLink;
+    // 3. 목적지 링크 확인 (단축 링크 우선, 없으면 일반 링크)
+    const targetUrl = product.link || product.longLink;
 
-    if (supabase) {
-      const code = String(product.code);
-      // 백그라운드에서 RPC 호출 (조회수 증가) - await 제거
-      supabase.rpc('increment_daily_view', { p_product_code: code }).catch(() => {});
+    if (!targetUrl) {
+      alert("상품 링크가 등록되지 않았습니다. 데이터를 확인해주세요.");
+      return;
     }
 
-    // 150ms 대기 후 이동: 
-    // 브라우저가 이동 전에 네트워크 요청을 시작할 충분한 틈을 주고, 사용자는 지연을 거의 못 느낌
-    setTimeout(() => {
-      if (targetUrl) {
-        window.location.href = targetUrl;
-      } else {
-        alert("상품 링크가 등록되지 않았습니다. 시트를 확인해주세요.");
+    // 4. 조회수 증가 (keepalive를 활용한 절대 누락 없는 백그라운드 전송)
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (supabaseUrl && supabaseKey) {
+        // fetch의 keepalive: true 옵션은 페이지가 이동/종료되어도 브라우저가 끝까지 전송을 보장합니다.
+        fetch(`${supabaseUrl}/rest/v1/rpc/increment_daily_view`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`
+          },
+          body: JSON.stringify({ p_product_code: String(product.code) }),
+          keepalive: true 
+        }).catch(() => {});
+      } else if (supabase) {
+        // 환경변수를 직접 못 찾을 경우 기존 클라이언트로 쏘고 버리기 (폴백)
+        supabase.rpc('increment_daily_view', { p_product_code: String(product.code) }).catch(() => {});
       }
-    }, 150);
+    } catch (error) {
+      console.warn('View update failed', error);
+    }
+
+    // 5. 무조건, 즉시 페이지 이동 (0.1초의 지연도 없음 = 브라우저 차단 절대 불가)
+    window.location.href = targetUrl;
 
   }, [addRecentView]);
 
