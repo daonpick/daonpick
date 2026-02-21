@@ -12,7 +12,6 @@ import LuckyCard from '../components/LuckyCard'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // [모듈 1] 커스텀 훅: 가로 스크롤 (useHorizontalScroll)
-// 기능: 마우스 드래그 및 휠을 이용한 부드러운 가로 스크롤 지원
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function useHorizontalScroll() {
   const ref = useRef(null)
@@ -85,7 +84,7 @@ function useHorizontalScroll() {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// [모듈 2] 설정 및 헬퍼 함수 (데이터 파싱 및 포맷팅)
+// [모듈 2] 설정 및 헬퍼 함수
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const PRODUCTS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSje1PMCjbJe528NHFMP4X5OEauML49AaRVb2sHUhJDfe3JwBub6raAxk4Zg-D-km2Cugw4xTy9E4cA/pub?output=csv'
 const SETTINGS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSiix1Lxl3nmpURsLENJdkZexya5dfVBPwElybHj7goPEWmYQYYCm7fftJSt0dVPkhDMgLbpMJ4b_rg/pub?output=csv'
@@ -136,7 +135,7 @@ const fetchCSV = (url) => {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// [모듈 3] 초기 더미 데이터 (로딩 전 Fallback)
+// [모듈 3] 초기 더미 데이터
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const DUMMY_PRODUCTS = [
   { id: '1', code: '10024', name: '무선 야채 다지기', category: '주방용품', link: 'https://example.com', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10024' },
@@ -150,7 +149,7 @@ const DUMMY_SETTINGS = [
 const ITEMS_PER_PAGE = 10
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// [모듈 4] UI 서브 컴포넌트 (스켈레톤 및 개별 카드)
+// [모듈 4] UI 서브 컴포넌트
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function SkeletonRanking() {
   return (
@@ -182,7 +181,6 @@ function SkeletonGrid() {
 }
 
 function RankingCard({ product, rank, onClickProduct, badge, isDragged }) {
-  const isTop3 = rank <= 3
   const { toggleWishlist, isWishlisted } = useStore()
   const wishlisted = isWishlisted(product.code)
 
@@ -261,7 +259,6 @@ function ProductCard({ product, onClickProduct }) {
   )
 }
 
-// [모듈 4.2] 무한 스크롤 상품 그리드 (상위 리렌더 차단용 memo)
 const InfiniteProductGrid = memo(function InfiniteProductGrid({ filteredProducts, visibleCount, hasMore, onLoadMore, onClickProduct }) {
   const loadMoreRef = useRef(null)
 
@@ -302,7 +299,7 @@ const InfiniteProductGrid = memo(function InfiniteProductGrid({ filteredProducts
 })
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// [모듈 5] 메인 페이지 컴포넌트 (Home) - 상태 및 데이터 로직
+// [모듈 5] 메인 페이지 컴포넌트 (Home)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export default function Home() {
   const [products, setProducts] = useState([])
@@ -326,7 +323,6 @@ export default function Home() {
   const categoryTabRef = useRef(null)
   const navSectionRef = useRef(null)
 
-  // ── 타이핑 플레이스홀더 ──
   const PLACEHOLDER_PHRASES = useMemo(() => [
     '찾으시는 상품 번호가 있나요?',
     '상품번호를 입력해주세요',
@@ -367,11 +363,9 @@ export default function Home() {
     return () => clearTimeout(timer)
   }, [inputFocused, query, PLACEHOLDER_PHRASES])
 
-  // ── 데이터 로드 (⭐ 업그레이드: 주간 랭킹 호환 로직 적용) ──
   useEffect(() => {
     let cancelled = false
     async function load() {
-      // 1. CSV 데이터 가져오기
       const [csvProducts, csvSettings] = await Promise.all([
         fetchCSV(PRODUCTS_CSV_URL),
         fetchCSV(SETTINGS_CSV_URL),
@@ -381,28 +375,22 @@ export default function Home() {
       const sheetProducts = csvProducts?.length ? csvProducts : DUMMY_PRODUCTS
       if (csvSettings?.length) setSettings(csvSettings)
 
-      // 2. Supabase에서 주간 조회수 데이터 가져오기 (RPC 호출)
       let viewsData = [];
       if (supabase) {
-        // 향후 생성할 get_weekly_views RPC를 우선 호출 (없으면 기존 views 폴백)
         const { data, error } = await supabase.rpc('get_weekly_views');
         if (!error && data) {
           viewsData = data;
         } else {
-          // RPC 생성 전 에러 방지용 기존 로직 폴백
           const fallback = await supabase.from('views').select('*');
           if (fallback.data) viewsData = fallback.data;
         }
       }
 
-      // 3. 데이터를 Map으로 변환하여 매핑
       const viewsMap = new Map()
       for (const row of viewsData) {
-        // 주간 집계(total_views)가 있으면 쓰고, 없으면 기존(count) 사용
         viewsMap.set(String(row.code), row.total_views ?? row.count ?? 0)
       }
 
-      // 4. 상품 데이터 병합
       const merged = sheetProducts.map((p) => ({
         ...p,
         views: viewsMap.get(String(p.code)) ?? 0,
@@ -415,10 +403,8 @@ export default function Home() {
     return () => { cancelled = true }
   }, [])
 
-  // ── 파생 데이터 생성 ──
   const navButtons = useMemo(() => settings.filter((s) => s.type === 'button'), [settings])
   const fallbackUrl = useMemo(() => settings.find((s) => s.type === 'fallback')?.url || '#', [settings])
-  // TOP 10 랭킹: 조회수 높은 순 정렬
   const topProducts = useMemo(() => [...products].sort((a, b) => (b.views ?? 0) - (a.views ?? 0)).slice(0, 10), [products])
 
   const CATEGORY_ORDER = [
@@ -436,7 +422,7 @@ export default function Home() {
   const stripEmoji = (str) => str.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F]/gu, '').trim()
 
   const categories = useMemo(() => {
-    const existingKeys = new Set(products.map((p) => stripEmoji(p.category)))
+    const existingKeys = new Set(products.map((p) => stripEmoji(p.category || '')))
     return CATEGORY_ORDER.filter((c) => existingKeys.has(c.key))
   }, [products])
 
@@ -445,7 +431,7 @@ export default function Home() {
 
   const filteredProducts = useMemo(() => {
     if (effectiveTab === '전체') return products
-    return products.filter((p) => stripEmoji(p.category) === effectiveTab)
+    return products.filter((p) => stripEmoji(p.category || '') === effectiveTab)
   }, [products, effectiveTab])
 
   const hasMore = visibleCount < filteredProducts.length
@@ -458,14 +444,10 @@ export default function Home() {
     setVisibleCount(ITEMS_PER_PAGE)
   }, [effectiveTab])
 
-  // ── Intersection Observers (애니메이션) ──
   useEffect(() => {
     const navEl = navSectionRef.current
     if (!navEl) return
-    const observer = new IntersectionObserver(
-      ([entry]) => setNavVisible(entry.isIntersecting),
-      { threshold: 0.2 }
-    )
+    const observer = new IntersectionObserver(([entry]) => setNavVisible(entry.isIntersecting), { threshold: 0.2 })
     observer.observe(navEl)
     return () => observer.disconnect()
   }, [loading])
@@ -473,10 +455,7 @@ export default function Home() {
   useEffect(() => {
     const el = categoryTabRef.current
     if (!el) return
-    const observer = new IntersectionObserver(
-      ([entry]) => setCategoryVisible(entry.isIntersecting),
-      { threshold: 0.2 }
-    )
+    const observer = new IntersectionObserver(([entry]) => setCategoryVisible(entry.isIntersecting), { threshold: 0.2 })
     observer.observe(el)
     return () => observer.disconnect()
   }, [loading])
@@ -484,13 +463,11 @@ export default function Home() {
   const badges = useMemo(() => getUniqueBadges(), [])
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ⭐ [핵심 업그레이드] 클릭 핸들러 (조회수 누락 방지 및 RPC 적용)
+  // ⭐ [핵심 업그레이드] 클릭 핸들러 (Promise.race 안전 이동)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const handleClickProduct = useCallback((product) => {
-    // 1. 최근 본 상품 추가 (로컬 스토리지)
+  const handleClickProduct = useCallback(async (product) => {
     addRecentView(product);
 
-    // 2. GA4 이벤트 전송 (비동기 처리)
     if (window.gtag) {
       window.gtag('event', 'click_product', {
         'event_category': 'Outbound Link',
@@ -500,29 +477,43 @@ export default function Home() {
       });
     }
 
-    // 3. Supabase 조회수 카운트 증가 (Fire-and-Forget RPC 호출)
+    // 시트 헤더 불일치 등 여러 변수를 대비해 가능한 링크값 모두 확인
+    const targetUrl = product.link || product.shortLink || product.longLink;
+
+    const navigateToLink = () => {
+      if (targetUrl) {
+        window.location.href = targetUrl;
+      } else {
+        alert("상품 링크가 등록되지 않았습니다.");
+      }
+    };
+
     if (supabase) {
       const code = String(product.code);
-      // await 없이 백그라운드에서 실행하여 브라우저 블로킹 방지
-      // 향후 생성할 increment_daily_view RPC 호출 (없으면 에러 무시)
-      supabase.rpc('increment_daily_view', { p_product_code: code }).catch(() => {
-        // RPC가 없을 경우를 대비한 구버전 폴백 로직 (선택사항)
-      });
+      try {
+        // 서버 요청(조회수 증가)과 0.3초 타이머 중 먼저 끝나는 것을 기다림
+        // 즉, 서버가 너무 느리더라도 무조건 0.3초 뒤에는 페이지를 이동시킴 (브라우저 차단 방지)
+        await Promise.race([
+          supabase.rpc('increment_daily_view', { p_product_code: code }),
+          new Promise(resolve => setTimeout(resolve, 300))
+        ]);
+      } catch (e) {
+        console.warn('View update warn:', e);
+      } finally {
+        navigateToLink();
+      }
+    } else {
+      navigateToLink();
     }
-
-    // 4. 안전한 페이지 이동 (150ms 딜레이 부여)
-    // 브라우저가 이동 전 DB와 GA4 통신을 시작할 수 있는 최소한의 시간을 벌어줍니다.
-    setTimeout(() => {
-      window.location.href = product.link;
-    }, 150);
-
   }, [addRecentView]);
 
   const handleSearch = (e) => {
     e.preventDefault()
     const trimmed = query.trim()
     if (!trimmed) return
-    const found = products.find((p) => p.code === trimmed)
+    
+    // 강제 형변환 및 trim 처리하여 숫자/문자 타입 불일치로 인한 검색 불가 해결
+    const found = products.find((p) => String(p.code).trim() === trimmed)
     if (found) {
       handleClickProduct(found)
     } else {
@@ -535,7 +526,7 @@ export default function Home() {
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // [모듈 6] 메인 컴포넌트 (Home) - 렌더링 영역
+  // [모듈 6] 렌더링 영역
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const seoTitle = effectiveTab === '전체'
     ? '다온픽 | 영상 속 그 제품, 번호로 찾으세요'
