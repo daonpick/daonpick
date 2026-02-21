@@ -464,58 +464,53 @@ export default function Home() {
   const badges = useMemo(() => getUniqueBadges(), [])
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ⭐ [정공법] 클릭 핸들러 (서버 저장 100% 확인 후 이동)
+  // ⭐ [정석 해결] 클릭 핸들러 (업계 표준 아웃바운드 추적 기법)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const handleClickProduct = useCallback(async (product) => {
-    // 1. 최근 본 상품 저장 (로컬)
     addRecentView(product);
 
-    if (window.gtag) {
-      window.gtag('event', 'click_product', {
-        'event_category': 'Outbound Link',
-        'event_label': product.name,
-        'product_code': String(product.code),
-        'value': 1
-      });
-    }
-
-    // 2. 목적지 링크 확보
     let targetUrl = product.link || product.shortLink || product.longLink;
     if (!targetUrl) {
-      alert("상품 링크가 없습니다. 데이터를 확인해주세요.");
+      alert("상품 링크가 없습니다.");
       return;
     }
     if (!targetUrl.startsWith('http')) targetUrl = 'https://' + targetUrl;
 
-    // 3. ✨ 핵심: 꼼수 없이 서버에 저장이 완료될 때까지 '기다립니다(await)'.
-    if (supabase) {
+    // 💡 Supabase 연결 상태 점검
+    if (!supabase) {
+      alert("🚨 에러: Supabase 클라이언트가 없습니다. (환경변수 세팅 확인 필요)");
+    } else {
       try {
-        // 이 코드가 끝날 때까지 다음 줄로 넘어가지 않음 (보통 0.1초 소요)
-        await supabase.rpc('increment_daily_view', { p_product_code: String(product.code) });
-      } catch (error) {
-        console.warn('DB Update Error:', error);
+        // 서버에 저장 요청
+        const { error } = await supabase.rpc('increment_daily_view', { p_product_code: String(product.code) });
+        
+        // 에러가 있다면 조용히 넘기지 않고 화면에 팝업을 띄움!
+        if (error) {
+          alert("🚨 DB 저장 실패: " + error.message);
+        }
+      } catch (err) {
+        alert("🚨 네트워크 또는 코드 에러: " + err.message);
       }
     }
 
-    // 4. 저장이 끝났으므로 100% 안전하게 이동
+    // 확인 후 이동
     window.location.href = targetUrl;
 
   }, [addRecentView]);
 
-  // 검색 함수도 동일하게 기다리도록 async/await 추가
-  const handleSearch = useCallback(async (e) => {
-    e.preventDefault();
-    const trimmed = query.trim();
-    if (!trimmed) return;
+  const handleSearch = (e) => {
+    e.preventDefault()
+    const trimmed = query.trim()
+    if (!trimmed) return
     
-    const found = products.find((p) => String(p.code).trim() === trimmed);
+    const found = products.find((p) => String(p.code).trim() === trimmed)
     if (found) {
-      await handleClickProduct(found); // 검색 시에도 저장될 때까지 기다림
+      handleClickProduct(found)
     } else {
-      setSearchToast('존재하지 않는 코드입니다.');
-      setTimeout(() => setSearchToast(''), 2000);
+      setSearchToast('존재하지 않는 코드입니다.')
+      setTimeout(() => setSearchToast(''), 2000)
     }
-  }, [query, products, handleClickProduct]);
+  }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // [모듈 6] 렌더링 영역
