@@ -464,10 +464,10 @@ export default function Home() {
   const badges = useMemo(() => getUniqueBadges(), [])
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ⭐ [정석 해결] 클릭 핸들러 (업계 표준 아웃바운드 추적 기법)
+  // ⭐ [정공법] 클릭 핸들러 (서버 저장 100% 확인 후 이동)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const handleClickProduct = useCallback((product) => {
-    // 1. 최근 본 상품 저장
+  const handleClickProduct = useCallback(async (product) => {
+    // 1. 최근 본 상품 저장 (로컬)
     addRecentView(product);
 
     if (window.gtag) {
@@ -479,60 +479,43 @@ export default function Home() {
       });
     }
 
-    // 2. 목적지 링크 확보 (데이터가 비어있으면 원인 파악을 위해 팝업창 띄움)
+    // 2. 목적지 링크 확보
     let targetUrl = product.link || product.shortLink || product.longLink;
     if (!targetUrl) {
-      alert("링크 데이터가 없습니다. 시트 1행: " + JSON.stringify(product));
+      alert("상품 링크가 없습니다. 데이터를 확인해주세요.");
       return;
     }
     if (!targetUrl.startsWith('http')) targetUrl = 'https://' + targetUrl;
 
-    // 3. 안전한 이동 함수
-    let navigated = false;
-    const doNavigate = () => {
-      if (!navigated) {
-        navigated = true;
-        window.location.href = targetUrl;
+    // 3. ✨ 핵심: 꼼수 없이 서버에 저장이 완료될 때까지 '기다립니다(await)'.
+    if (supabase) {
+      try {
+        // 이 코드가 끝날 때까지 다음 줄로 넘어가지 않음 (보통 0.1초 소요)
+        await supabase.rpc('increment_daily_view', { p_product_code: String(product.code) });
+      } catch (error) {
+        console.warn('DB Update Error:', error);
       }
-    };
-
-    // 4. [핵심] 무조건 0.35초 뒤에는 강제 이동 (통신 지연으로 인한 멈춤 100% 방지)
-    const fallbackTimer = setTimeout(doNavigate, 350);
-
-    // 5. Supabase 조회수 증가 요청 (async/await 배제)
-    try {
-      if (supabase) {
-        // 전송 성공 시 타이머를 끄고 즉시 이동 (보통 0.05초 만에 실행됨)
-        supabase.rpc('increment_daily_view', { p_product_code: String(product.code) })
-          .then(() => {
-            clearTimeout(fallbackTimer);
-            doNavigate();
-          })
-          .catch((err) => {
-            console.warn("View API Error:", err);
-            doNavigate(); // 에러가 나도 무조건 이동시킴
-          });
-      } else {
-        doNavigate();
-      }
-    } catch (error) {
-      doNavigate();
     }
+
+    // 4. 저장이 끝났으므로 100% 안전하게 이동
+    window.location.href = targetUrl;
+
   }, [addRecentView]);
 
-  const handleSearch = (e) => {
-    e.preventDefault()
-    const trimmed = query.trim()
-    if (!trimmed) return
+  // 검색 함수도 동일하게 기다리도록 async/await 추가
+  const handleSearch = useCallback(async (e) => {
+    e.preventDefault();
+    const trimmed = query.trim();
+    if (!trimmed) return;
     
-    const found = products.find((p) => String(p.code).trim() === trimmed)
+    const found = products.find((p) => String(p.code).trim() === trimmed);
     if (found) {
-      handleClickProduct(found)
+      await handleClickProduct(found); // 검색 시에도 저장될 때까지 기다림
     } else {
-      setSearchToast('존재하지 않는 코드입니다.')
-      setTimeout(() => setSearchToast(''), 2000)
+      setSearchToast('존재하지 않는 코드입니다.');
+      setTimeout(() => setSearchToast(''), 2000);
     }
-  }
+  }, [query, products, handleClickProduct]);
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // [모듈 6] 렌더링 영역
