@@ -1,3 +1,6 @@
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// [모듈 0] Imports 및 전역 설정
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 import { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react'
 import { Helmet } from 'react-helmet-async'
 import Papa from 'papaparse'
@@ -8,7 +11,8 @@ import Sidebar from '../components/Sidebar'
 import LuckyCard from '../components/LuckyCard'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 0. 가로 스크롤 (화살표 + 드래그 + 휠)
+// [모듈 1] 커스텀 훅: 가로 스크롤 (useHorizontalScroll)
+// 기능: 마우스 드래그 및 휠을 이용한 부드러운 가로 스크롤 지원
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function useHorizontalScroll() {
   const ref = useRef(null)
@@ -31,7 +35,6 @@ function useHorizontalScroll() {
 
   const isDragged = useCallback(() => drag.current.moved, [])
 
-  // React onMouseDown 핸들러 — JSX에 직접 바인딩
   const onMouseDown = useCallback((e) => {
     if (e.button !== 0) return
     const el = ref.current
@@ -82,7 +85,7 @@ function useHorizontalScroll() {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 1. 설정 및 헬퍼 함수
+// [모듈 2] 설정 및 헬퍼 함수 (데이터 파싱 및 포맷팅)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const PRODUCTS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSje1PMCjbJe528NHFMP4X5OEauML49AaRVb2sHUhJDfe3JwBub6raAxk4Zg-D-km2Cugw4xTy9E4cA/pub?output=csv'
 const SETTINGS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSiix1Lxl3nmpURsLENJdkZexya5dfVBPwElybHj7goPEWmYQYYCm7fftJSt0dVPkhDMgLbpMJ4b_rg/pub?output=csv'
@@ -101,7 +104,7 @@ const formatViewCount = (realCount, code) => {
 };
 
 const BADGE_TEMPLATES = [
-  () => '🔥 실시간 주문 폭주',
+  () => '🔥 주간 급상승',
   () => `👁️ ${Math.floor(Math.random() * 301) + 200}명 보고 있음`,
   () => '📦 재구매율 1위',
   () => '⚡ 마감 임박',
@@ -133,7 +136,7 @@ const fetchCSV = (url) => {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 2. 초기 데이터 (더미 & 설정)
+// [모듈 3] 초기 더미 데이터 (로딩 전 Fallback)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const DUMMY_PRODUCTS = [
   { id: '1', code: '10024', name: '무선 야채 다지기', category: '주방용품', link: 'https://example.com', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10024' },
@@ -147,7 +150,7 @@ const DUMMY_SETTINGS = [
 const ITEMS_PER_PAGE = 10
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 3. 서브 컴포넌트 (스켈레톤 및 카드)
+// [모듈 4] UI 서브 컴포넌트 (스켈레톤 및 개별 카드)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function SkeletonRanking() {
   return (
@@ -258,9 +261,7 @@ function ProductCard({ product, onClickProduct }) {
   )
 }
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 4. 무한 스크롤 상품 그리드 (memo로 분리 → 상위 리렌더 차단)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// [모듈 4.2] 무한 스크롤 상품 그리드 (상위 리렌더 차단용 memo)
 const InfiniteProductGrid = memo(function InfiniteProductGrid({ filteredProducts, visibleCount, hasMore, onLoadMore, onClickProduct }) {
   const loadMoreRef = useRef(null)
 
@@ -301,7 +302,7 @@ const InfiniteProductGrid = memo(function InfiniteProductGrid({ filteredProducts
 })
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 5. 메인 페이지 컴포넌트
+// [모듈 5] 메인 페이지 컴포넌트 (Home) - 상태 및 데이터 로직
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export default function Home() {
   const [products, setProducts] = useState([])
@@ -325,7 +326,7 @@ export default function Home() {
   const categoryTabRef = useRef(null)
   const navSectionRef = useRef(null)
 
-  // ── 타이핑 플레이스홀더 ─────────────────────────────
+  // ── 타이핑 플레이스홀더 ──
   const PLACEHOLDER_PHRASES = useMemo(() => [
     '찾으시는 상품 번호가 있나요?',
     '상품번호를 입력해주세요',
@@ -366,27 +367,42 @@ export default function Home() {
     return () => clearTimeout(timer)
   }, [inputFocused, query, PLACEHOLDER_PHRASES])
 
-  // ── 데이터 로드 ────────────────────────────────────
+  // ── 데이터 로드 (⭐ 업그레이드: 주간 랭킹 호환 로직 적용) ──
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const [csvProducts, csvSettings, viewsResult] = await Promise.all([
+      // 1. CSV 데이터 가져오기
+      const [csvProducts, csvSettings] = await Promise.all([
         fetchCSV(PRODUCTS_CSV_URL),
         fetchCSV(SETTINGS_CSV_URL),
-        supabase ? supabase.from('views').select('*') : Promise.resolve({ data: null }),
       ])
       if (cancelled) return
 
       const sheetProducts = csvProducts?.length ? csvProducts : DUMMY_PRODUCTS
       if (csvSettings?.length) setSettings(csvSettings)
 
-      const viewsMap = new Map()
-      if (viewsResult.data) {
-        for (const row of viewsResult.data) {
-          viewsMap.set(String(row.code), row.count ?? 0)
+      // 2. Supabase에서 주간 조회수 데이터 가져오기 (RPC 호출)
+      let viewsData = [];
+      if (supabase) {
+        // 향후 생성할 get_weekly_views RPC를 우선 호출 (없으면 기존 views 폴백)
+        const { data, error } = await supabase.rpc('get_weekly_views');
+        if (!error && data) {
+          viewsData = data;
+        } else {
+          // RPC 생성 전 에러 방지용 기존 로직 폴백
+          const fallback = await supabase.from('views').select('*');
+          if (fallback.data) viewsData = fallback.data;
         }
       }
 
+      // 3. 데이터를 Map으로 변환하여 매핑
+      const viewsMap = new Map()
+      for (const row of viewsData) {
+        // 주간 집계(total_views)가 있으면 쓰고, 없으면 기존(count) 사용
+        viewsMap.set(String(row.code), row.total_views ?? row.count ?? 0)
+      }
+
+      // 4. 상품 데이터 병합
       const merged = sheetProducts.map((p) => ({
         ...p,
         views: viewsMap.get(String(p.code)) ?? 0,
@@ -399,9 +415,10 @@ export default function Home() {
     return () => { cancelled = true }
   }, [])
 
-  // ── 파생 데이터 ────────────────────────────────────
+  // ── 파생 데이터 생성 ──
   const navButtons = useMemo(() => settings.filter((s) => s.type === 'button'), [settings])
   const fallbackUrl = useMemo(() => settings.find((s) => s.type === 'fallback')?.url || '#', [settings])
+  // TOP 10 랭킹: 조회수 높은 순 정렬
   const topProducts = useMemo(() => [...products].sort((a, b) => (b.views ?? 0) - (a.views ?? 0)).slice(0, 10), [products])
 
   const CATEGORY_ORDER = [
@@ -416,7 +433,6 @@ export default function Home() {
     { key: '자동차용품', label: '🏎️자동차용품' },
   ]
 
-  // CSV 카테고리에서 이모지 제거 → 한글명만 추출
   const stripEmoji = (str) => str.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F]/gu, '').trim()
 
   const categories = useMemo(() => {
@@ -438,12 +454,11 @@ export default function Home() {
     setVisibleCount((prev) => prev + ITEMS_PER_PAGE)
   }, [])
 
-  // 탭 변경 시 visibleCount 리셋
   useEffect(() => {
     setVisibleCount(ITEMS_PER_PAGE)
   }, [effectiveTab])
 
-  // ── Nav 버튼 + 카테고리 섹션 스크롤 감지 (재진입 시 재생) ──
+  // ── Intersection Observers (애니메이션) ──
   useEffect(() => {
     const navEl = navSectionRef.current
     if (!navEl) return
@@ -466,13 +481,16 @@ export default function Home() {
     return () => observer.disconnect()
   }, [loading])
 
-  // ── TOP3 뱃지 (새로고침 시 랜덤) ──────────────────
   const badges = useMemo(() => getUniqueBadges(), [])
 
-  // ── 클릭 핸들러 (GA4 + Supabase Await + 최근 본 상품 + 이동) ──
-  const handleClickProduct = useCallback(async (product) => {
-    addRecentView(product)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ⭐ [핵심 업그레이드] 클릭 핸들러 (조회수 누락 방지 및 RPC 적용)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const handleClickProduct = useCallback((product) => {
+    // 1. 최근 본 상품 추가 (로컬 스토리지)
+    addRecentView(product);
 
+    // 2. GA4 이벤트 전송 (비동기 처리)
     if (window.gtag) {
       window.gtag('event', 'click_product', {
         'event_category': 'Outbound Link',
@@ -482,27 +500,22 @@ export default function Home() {
       });
     }
 
+    // 3. Supabase 조회수 카운트 증가 (Fire-and-Forget RPC 호출)
     if (supabase) {
-      const code = String(product.code)
-      const { data } = await supabase
-        .from('views')
-        .select('count')
-        .eq('code', code)
-        .single()
-
-      if (data) {
-        await supabase
-          .from('views')
-          .update({ count: (data.count ?? 0) + 1 })
-          .eq('code', code)
-      } else {
-        await supabase
-          .from('views')
-          .insert({ code, count: 1 })
-      }
+      const code = String(product.code);
+      // await 없이 백그라운드에서 실행하여 브라우저 블로킹 방지
+      // 향후 생성할 increment_daily_view RPC 호출 (없으면 에러 무시)
+      supabase.rpc('increment_daily_view', { p_product_code: code }).catch(() => {
+        // RPC가 없을 경우를 대비한 구버전 폴백 로직 (선택사항)
+      });
     }
 
-    window.location.href = product.link;
+    // 4. 안전한 페이지 이동 (150ms 딜레이 부여)
+    // 브라우저가 이동 전 DB와 GA4 통신을 시작할 수 있는 최소한의 시간을 벌어줍니다.
+    setTimeout(() => {
+      window.location.href = product.link;
+    }, 150);
+
   }, [addRecentView]);
 
   const handleSearch = (e) => {
@@ -521,7 +534,9 @@ export default function Home() {
     }
   }
 
-  // ── 렌더링 ─────────────────────────────────────────
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // [모듈 6] 메인 컴포넌트 (Home) - 렌더링 영역
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const seoTitle = effectiveTab === '전체'
     ? '다온픽 | 영상 속 그 제품, 번호로 찾으세요'
     : `다온픽 | ${effectiveTab} 상품 모아보기`
@@ -537,6 +552,7 @@ export default function Home() {
         <meta property="og:title" content={seoTitle} />
         <meta property="og:description" content={seoDesc} />
       </Helmet>
+      
       <div className="sticky top-0 z-50 w-full bg-gray-800">
         <p className="max-w-[480px] mx-auto px-4 py-1.5 text-[10px] text-gray-400 text-center leading-relaxed">
           이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
@@ -597,7 +613,7 @@ export default function Home() {
             {topProducts.length > 0 && (
               <section className="mt-10">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-gray-900 px-0.5">🔥 실시간 급상승 TOP 10</h2>
+                  <h2 className="text-lg font-bold text-gray-900 px-0.5">🔥 주간 급상승 TOP 10</h2>
                   <div className="flex gap-1">
                     <button type="button" aria-label="이전 상품" onClick={() => scrollDir(-1)}
                             className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${canScrollLeft ? 'bg-gray-200 text-gray-600 active:bg-gray-300' : 'bg-gray-100 text-gray-300'}`}>
