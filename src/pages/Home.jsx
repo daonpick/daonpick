@@ -464,7 +464,7 @@ export default function Home() {
   const badges = useMemo(() => getUniqueBadges(), [])
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ⭐ [최종 솔루션] 클릭 핸들러 (새 탭 + 백그라운드 통신 보장)
+  // ⭐ [최종 병기] 클릭 핸들러 (팝업 차단 우회 + 무지연 백그라운드 전송)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const handleClickProduct = useCallback((product) => {
     // 1. 최근 본 상품 추가 (로컬)
@@ -480,24 +480,48 @@ export default function Home() {
       });
     }
 
-    // 3. 목적지 링크 확보
-    const targetUrl = product.link || product.longLink;
+    // 3. 목적지 링크 확보 및 안전 처리 (http 자동 추가)
+    let targetUrl = product.link || product.shortLink || product.longLink;
     if (!targetUrl) {
       alert("상품 링크가 등록되지 않았습니다.");
       return;
     }
-
-    // 4. 조회수 증가 (기존 탭이 살아있으므로 100% 안전하게 전송됨)
-    if (supabase) {
-      const code = String(product.code);
-      supabase.rpc('increment_daily_view', { p_product_code: code }).catch((err) => {
-        console.warn("View update error:", err);
-      });
+    targetUrl = targetUrl.trim();
+    if (!targetUrl.startsWith('http')) {
+      targetUrl = 'https://' + targetUrl; // 링크 오류 원천 차단
     }
 
-    // 5. 무조건 즉시 새 탭(쿠팡 앱)으로 띄우기
-    // 클릭 제스처 내에서 즉각 실행되므로 인앱 브라우저나 사파리에서도 차단되지 않습니다.
-    window.open(targetUrl, '_blank');
+    // 4. 조회수 증가: [CORS 우회 + sendBeacon] 궁극의 백그라운드 전송
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (supabaseUrl && anonKey) {
+        // apikey를 주소에 숨겨서 보내고, 데이터는 Form 형식으로 변환하여
+        // 브라우저의 사전 검열(OPTIONS)을 완전히 생략시킵니다.
+        const endpoint = `${supabaseUrl}/rest/v1/rpc/increment_daily_view?apikey=${anonKey}`;
+        const formData = new URLSearchParams();
+        formData.append('p_product_code', String(product.code));
+
+        if (navigator.sendBeacon) {
+          // 페이지가 꺼져도 브라우저가 책임지고 전송 (지연율 0%)
+          navigator.sendBeacon(endpoint, formData);
+        } else {
+          // sendBeacon 미지원 구형 브라우저 대비용 폴백
+          fetch(endpoint, {
+            method: 'POST',
+            body: formData,
+            keepalive: true,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+          }).catch(() => {});
+        }
+      }
+    } catch (error) {
+      console.warn('View update error', error);
+    }
+
+    // 5. 무조건 즉시, 현재 창에서 이동! (팝업 차단 100% 무력화)
+    window.location.href = targetUrl;
 
   }, [addRecentView]);
 
@@ -506,7 +530,7 @@ export default function Home() {
     const trimmed = query.trim()
     if (!trimmed) return
     
-    // 검색 시 문자열 공백 파괴 및 매칭
+    // 검색어 공백 및 타입 불일치 방지
     const found = products.find((p) => String(p.code).trim() === trimmed)
     if (found) {
       handleClickProduct(found)
