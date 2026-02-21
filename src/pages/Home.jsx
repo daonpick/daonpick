@@ -11,7 +11,7 @@ import Sidebar from '../components/Sidebar'
 import LuckyCard from '../components/LuckyCard'
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// [모듈 1] 커스텀 훅: 가로 스크롤 (useHorizontalScroll)
+// [모듈 1] 커스텀 훅: 가로 스크롤
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function useHorizontalScroll() {
   const ref = useRef(null)
@@ -388,6 +388,7 @@ export default function Home() {
 
       const viewsMap = new Map()
       for (const row of viewsData) {
+        // SQL 수정으로 정상적으로 반환된 row.code와 row.total_views를 매핑합니다.
         viewsMap.set(String(row.code), row.total_views ?? row.count ?? 0)
       }
 
@@ -463,9 +464,9 @@ export default function Home() {
   const badges = useMemo(() => getUniqueBadges(), [])
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ⭐ [핵심 업그레이드] 클릭 핸들러 (Promise.race 안전 이동)
+  // ⭐ [안전한 이동 로직 적용] 클릭 핸들러
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const handleClickProduct = useCallback(async (product) => {
+  const handleClickProduct = useCallback((product) => {
     addRecentView(product);
 
     if (window.gtag) {
@@ -477,34 +478,25 @@ export default function Home() {
       });
     }
 
-    // 시트 헤더 불일치 등 여러 변수를 대비해 가능한 링크값 모두 확인
+    // 시트의 컬럼명에 대비하여 우선순위로 링크 획득
     const targetUrl = product.link || product.shortLink || product.longLink;
-
-    const navigateToLink = () => {
-      if (targetUrl) {
-        window.location.href = targetUrl;
-      } else {
-        alert("상품 링크가 등록되지 않았습니다.");
-      }
-    };
 
     if (supabase) {
       const code = String(product.code);
-      try {
-        // 서버 요청(조회수 증가)과 0.3초 타이머 중 먼저 끝나는 것을 기다림
-        // 즉, 서버가 너무 느리더라도 무조건 0.3초 뒤에는 페이지를 이동시킴 (브라우저 차단 방지)
-        await Promise.race([
-          supabase.rpc('increment_daily_view', { p_product_code: code }),
-          new Promise(resolve => setTimeout(resolve, 300))
-        ]);
-      } catch (e) {
-        console.warn('View update warn:', e);
-      } finally {
-        navigateToLink();
-      }
-    } else {
-      navigateToLink();
+      // 백그라운드에서 RPC 호출 (조회수 증가) - await 제거
+      supabase.rpc('increment_daily_view', { p_product_code: code }).catch(() => {});
     }
+
+    // 150ms 대기 후 이동: 
+    // 브라우저가 이동 전에 네트워크 요청을 시작할 충분한 틈을 주고, 사용자는 지연을 거의 못 느낌
+    setTimeout(() => {
+      if (targetUrl) {
+        window.location.href = targetUrl;
+      } else {
+        alert("상품 링크가 등록되지 않았습니다. 시트를 확인해주세요.");
+      }
+    }, 150);
+
   }, [addRecentView]);
 
   const handleSearch = (e) => {
@@ -512,7 +504,7 @@ export default function Home() {
     const trimmed = query.trim()
     if (!trimmed) return
     
-    // 강제 형변환 및 trim 처리하여 숫자/문자 타입 불일치로 인한 검색 불가 해결
+    // 검색 시 문자열 공백 및 타입 불일치 방지
     const found = products.find((p) => String(p.code).trim() === trimmed)
     if (found) {
       handleClickProduct(found)
