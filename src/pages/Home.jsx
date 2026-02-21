@@ -464,13 +464,12 @@ export default function Home() {
   const badges = useMemo(() => getUniqueBadges(), [])
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ⭐ [최종 병기] 클릭 핸들러 (팝업 차단 우회 + 무지연 백그라운드 전송)
+  // ⭐ [정석 해결] 클릭 핸들러 (업계 표준 아웃바운드 추적 기법)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const handleClickProduct = useCallback((product) => {
-    // 1. 최근 본 상품 추가 (로컬)
+    // 1. 최근 본 상품 저장
     addRecentView(product);
 
-    // 2. GA4 이벤트 전송
     if (window.gtag) {
       window.gtag('event', 'click_product', {
         'event_category': 'Outbound Link',
@@ -480,49 +479,45 @@ export default function Home() {
       });
     }
 
-    // 3. 목적지 링크 확보 및 안전 처리 (http 자동 추가)
+    // 2. 목적지 링크 확보 (데이터가 비어있으면 원인 파악을 위해 팝업창 띄움)
     let targetUrl = product.link || product.shortLink || product.longLink;
     if (!targetUrl) {
-      alert("상품 링크가 등록되지 않았습니다.");
+      alert("링크 데이터가 없습니다. 시트 1행: " + JSON.stringify(product));
       return;
     }
-    targetUrl = targetUrl.trim();
-    if (!targetUrl.startsWith('http')) {
-      targetUrl = 'https://' + targetUrl; // 링크 오류 원천 차단
-    }
+    if (!targetUrl.startsWith('http')) targetUrl = 'https://' + targetUrl;
 
-    // 4. 조회수 증가: [CORS 우회 + sendBeacon] 궁극의 백그라운드 전송
+    // 3. 안전한 이동 함수
+    let navigated = false;
+    const doNavigate = () => {
+      if (!navigated) {
+        navigated = true;
+        window.location.href = targetUrl;
+      }
+    };
+
+    // 4. [핵심] 무조건 0.35초 뒤에는 강제 이동 (통신 지연으로 인한 멈춤 100% 방지)
+    const fallbackTimer = setTimeout(doNavigate, 350);
+
+    // 5. Supabase 조회수 증가 요청 (async/await 배제)
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (supabaseUrl && anonKey) {
-        // apikey를 주소에 숨겨서 보내고, 데이터는 Form 형식으로 변환하여
-        // 브라우저의 사전 검열(OPTIONS)을 완전히 생략시킵니다.
-        const endpoint = `${supabaseUrl}/rest/v1/rpc/increment_daily_view?apikey=${anonKey}`;
-        const formData = new URLSearchParams();
-        formData.append('p_product_code', String(product.code));
-
-        if (navigator.sendBeacon) {
-          // 페이지가 꺼져도 브라우저가 책임지고 전송 (지연율 0%)
-          navigator.sendBeacon(endpoint, formData);
-        } else {
-          // sendBeacon 미지원 구형 브라우저 대비용 폴백
-          fetch(endpoint, {
-            method: 'POST',
-            body: formData,
-            keepalive: true,
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-          }).catch(() => {});
-        }
+      if (supabase) {
+        // 전송 성공 시 타이머를 끄고 즉시 이동 (보통 0.05초 만에 실행됨)
+        supabase.rpc('increment_daily_view', { p_product_code: String(product.code) })
+          .then(() => {
+            clearTimeout(fallbackTimer);
+            doNavigate();
+          })
+          .catch((err) => {
+            console.warn("View API Error:", err);
+            doNavigate(); // 에러가 나도 무조건 이동시킴
+          });
+      } else {
+        doNavigate();
       }
     } catch (error) {
-      console.warn('View update error', error);
+      doNavigate();
     }
-
-    // 5. 무조건 즉시, 현재 창에서 이동! (팝업 차단 100% 무력화)
-    window.location.href = targetUrl;
-
   }, [addRecentView]);
 
   const handleSearch = (e) => {
@@ -530,7 +525,6 @@ export default function Home() {
     const trimmed = query.trim()
     if (!trimmed) return
     
-    // 검색어 공백 및 타입 불일치 방지
     const found = products.find((p) => String(p.code).trim() === trimmed)
     if (found) {
       handleClickProduct(found)
