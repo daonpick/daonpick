@@ -89,6 +89,9 @@ function useHorizontalScroll() {
 const PRODUCTS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSje1PMCjbJe528NHFMP4X5OEauML49AaRVb2sHUhJDfe3JwBub6raAxk4Zg-D-km2Cugw4xTy9E4cA/pub?output=csv'
 const SETTINGS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSiix1Lxl3nmpURsLENJdkZexya5dfVBPwElybHj7goPEWmYQYYCm7fftJSt0dVPkhDMgLbpMJ4b_rg/pub?output=csv'
 
+// ⭐ 쿠팡 골드박스 링크 (오류 번호 입력 시 이동)
+const GOLDBOX_URL = 'https://link.coupang.com/a/dQHV5K';
+
 const formatViewCount = (realCount, code) => {
   const views = Number(realCount) || 0;
   const productCode = Number(code) || 0;
@@ -313,7 +316,9 @@ export default function Home() {
   const [typedText, setTypedText] = useState('')
   const [categoryVisible, setCategoryVisible] = useState(false)
   const [navVisible, setNavVisible] = useState(false)
-  const [searchToast, setSearchToast] = useState('')
+  
+  // ⭐ 황금 티켓 팝업 상태 추가
+  const [showGoldenTicket, setShowGoldenTicket] = useState(false)
 
   const { addRecentView } = useStore()
   const { ref: rankingRef, canScrollLeft, canScrollRight, scrollDir, isDragged, onMouseDown: onRankingMouseDown } = useHorizontalScroll()
@@ -324,9 +329,9 @@ export default function Home() {
   const navSectionRef = useRef(null)
 
   const PLACEHOLDER_PHRASES = useMemo(() => [
-    '찾으시는 상품 번호가 있나요?',
-    '상품번호를 입력해주세요',
-    '영상 속 그 제품, 번호로 검색!',
+    '찾으시는 상품의 시크릿 번호가 있나요?',
+    '내가 찾던 그 제품, 번호로 검색!',
+    '시크릿 번호를 입력해주세요',
     '번호만 입력하면 바로 확인!',
   ], [])
 
@@ -404,7 +409,6 @@ export default function Home() {
   }, [])
 
   const navButtons = useMemo(() => settings.filter((s) => s.type === 'button'), [settings])
-  const fallbackUrl = useMemo(() => settings.find((s) => s.type === 'fallback')?.url || '#', [settings])
   const topProducts = useMemo(() => [...products].sort((a, b) => (b.views ?? 0) - (a.views ?? 0)).slice(0, 10), [products])
 
   const CATEGORY_ORDER = [
@@ -463,7 +467,7 @@ export default function Home() {
   const badges = useMemo(() => getUniqueBadges(), [])
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ⭐ [최종 완성본] 클릭 핸들러 (팝업 완전 제거, 무결점 구동)
+  // ⭐ 클릭 & 검색 핸들러
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const handleClickProduct = useCallback(async (product) => {
     addRecentView(product);
@@ -478,24 +482,21 @@ export default function Home() {
     }
 
     let targetUrl = product.link || product.shortLink || product.longLink;
-    if (!targetUrl) return; // 링크가 없으면 무반응 (에러 팝업 띄우지 않음)
+    if (!targetUrl) return; 
     if (!targetUrl.startsWith('http')) targetUrl = 'https://' + targetUrl;
 
     if (supabase) {
       try {
-        // 서버에 데이터 반영 대기 (이제 Key 오류가 없으므로 0.05초 내에 통과)
         await supabase.rpc('increment_daily_view', { p_product_code: String(product.code) });
       } catch (err) {
-        // 에러가 발생해도 콘솔에만 남기고 사용자는 목적지로 보내줌
         console.warn("View API Error:", err);
       }
     }
 
-    // 통신 완료(혹은 실패) 즉시 이동!
     window.location.href = targetUrl;
-
   }, [addRecentView]);
 
+  // ⭐ 검색 시 번호가 없으면 황금 티켓 팝업 실행
   const handleSearch = useCallback(async (e) => {
     e.preventDefault();
     const trimmed = query.trim();
@@ -505,8 +506,13 @@ export default function Home() {
     if (found) {
       await handleClickProduct(found);
     } else {
-      setSearchToast('존재하지 않는 코드입니다.');
-      setTimeout(() => setSearchToast(''), 2000);
+      // 에러 토스트 대신 기분 좋은 황금 팝업 띄우기
+      setShowGoldenTicket(true);
+      
+      // 2초 동안 유저가 글을 읽고 즐거워할 시간을 준 뒤 골드박스로 이동!
+      setTimeout(() => {
+        window.location.href = GOLDBOX_URL;
+      }, 2000);
     }
   }, [query, products, handleClickProduct]);
 
@@ -521,7 +527,7 @@ export default function Home() {
     : `${effectiveTab} 카테고리의 인기 상품을 다온픽에서 확인하세요.`
 
   return (
-    <div className="flex flex-col items-center min-h-screen bg-[#FAFAFA] tracking-tight">
+    <div className="flex flex-col items-center min-h-screen bg-[#FAFAFA] tracking-tight relative">
       <Helmet>
         <title>{seoTitle}</title>
         <meta name="description" content={seoDesc} />
@@ -642,11 +648,6 @@ export default function Home() {
         )}
       </div>
 
-      {/* Search Toast */}
-      <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[80] px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium shadow-lg transition-all duration-300 ${searchToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-        {searchToast}
-      </div>
-
       {/* Sidebar */}
       <Sidebar
         open={sidebarOpen}
@@ -654,6 +655,25 @@ export default function Home() {
         categories={categories}
         onSelectCategory={(cat) => setActiveTab(cat)}
       />
+
+      {/* ⭐ 숨겨진 황금 티켓 팝업 (오류 번호 입력 시 등장) */}
+      <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-500 ${showGoldenTicket ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+        <div className={`bg-gradient-to-br from-[#FFD700] to-[#F37021] p-[3px] rounded-2xl shadow-2xl max-w-[320px] w-[85%] transform transition-all duration-500 ${showGoldenTicket ? 'scale-100 translate-y-0' : 'scale-90 translate-y-8'}`}>
+          <div className="bg-white p-6 rounded-[14px] text-center flex flex-col items-center">
+            <div className="text-5xl mb-3 animate-bounce">🎉</div>
+            <h3 className="text-lg font-black text-[#F37021] mb-2 tracking-tight">앗! 숨겨진 황금 코드 발견!</h3>
+            <p className="text-[14px] font-medium text-gray-700 leading-relaxed mb-5">
+              다온픽이 몰래 준비한<br/>
+              <strong className="text-gray-900">반짝특가 비밀통로</strong>가 열렸습니다!
+            </p>
+            <div className="flex items-center gap-2 text-xs font-bold text-gray-400">
+              <div className="w-4 h-4 border-2 border-gray-200 border-t-[#F37021] rounded-full animate-spin"></div>
+              황금박스로 이동 중...
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   )
 }
