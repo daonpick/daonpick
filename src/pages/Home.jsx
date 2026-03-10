@@ -3,7 +3,6 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 import { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react'
 import { Helmet } from 'react-helmet-async'
-import Papa from 'papaparse'
 import { Search, Eye, ChevronLeft, ChevronRight, ArrowRight, Menu, Heart } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useStore } from '../store/useStore'
@@ -86,8 +85,6 @@ function useHorizontalScroll() {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // [모듈 2] 설정 및 헬퍼 함수
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const PRODUCTS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSje1PMCjbJe528NHFMP4X5OEauML49AaRVb2sHUhJDfe3JwBub6raAxk4Zg-D-km2Cugw4xTy9E4cA/pub?output=csv'
-
 // ⭐ 쿠팡 골드박스 링크 (오류 번호 입력 시 이동)
 const GOLDBOX_URL = 'https://link.coupang.com/a/dQHV5K';
 
@@ -132,24 +129,12 @@ function shuffle(arr) {
 
 const getUniqueBadges = () => shuffle(BADGE_TEMPLATES).slice(0, 3).map((fn) => fn())
 
-const fetchCSV = (url) => {
-  return new Promise((resolve) => {
-    Papa.parse(url, {
-      download: true,
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => resolve(results.data),
-      error: () => resolve(null),
-    })
-  })
-}
-
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// [모듈 3] 초기 더미 데이터
+// [모듈 3] 더미 Fallback (Supabase 연결 실패 시)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const DUMMY_PRODUCTS = [
-  { id: '1', code: '10024', name: '무선 야채 다지기', category: '주방용품', link: 'https://example.com', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10024' },
-  { id: '2', code: '10025', name: '규조토 발매트', category: '생활잡화', link: 'https://example.com', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10025' },
+  { product_code: '0', display_code: '10024', ai_title: '무선 야채 다지기', category: '주방용품', short_link: 'https://example.com', thumbnail_url: 'https://placehold.co/300x400/e8e8e8/191919?text=10024' },
+  { product_code: '1', display_code: '10025', ai_title: '규조토 발매트', category: '생활잡화', short_link: 'https://example.com', thumbnail_url: 'https://placehold.co/300x400/e8e8e8/191919?text=10025' },
 ]
 
 const ITEMS_PER_PAGE = 10
@@ -240,9 +225,9 @@ function ProductCard({ product, onClickProduct }) {
           <img src={product.image} alt={product.name} draggable={false} loading="lazy" decoding="async"
                onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/f3f4f6/9ca3af?text=No+Image' }}
                className="w-full h-full object-cover pointer-events-none" />
-          {product.code && (
+          {product.display_code && (
             <div className="absolute top-0 left-0 bg-[#191F28]/80 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1.5 rounded-br-xl z-10">
-              {product.code}
+              {product.display_code}
             </div>
           )}
           <button aria-label={wishlisted ? '찜 해제' : '찜하기'} className="absolute top-2 right-2 z-10" onClick={(e) => { e.stopPropagation(); toggleWishlist(product) }}>
@@ -287,7 +272,7 @@ const InfiniteProductGrid = memo(function InfiniteProductGrid({ filteredProducts
         {filteredProducts.slice(0, visibleCount).map((p, i) => {
           const isNewBatch = i >= visibleCount - ITEMS_PER_PAGE
           return (
-            <div key={p.code}
+            <div key={p.product_code}
                  className={isNewBatch ? 'opacity-0' : ''}
                  style={isNewBatch ? { animation: 'slide-up 0.7s ease-out forwards', animationDelay: `${(i % ITEMS_PER_PAGE) * 200}ms` } : undefined}>
               <ProductCard product={p} onClickProduct={onClickProduct} />
@@ -373,10 +358,21 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const csvProducts = await fetchCSV(PRODUCTS_CSV_URL)
+      let dbProducts = []
+      if (supabase) {
+        const { data, error } = await supabase.from('products').select('*')
+        if (!error && data?.length) dbProducts = data
+      }
       if (cancelled) return
 
-      const sheetProducts = csvProducts?.length ? csvProducts : DUMMY_PRODUCTS
+      const base = dbProducts.length > 0 ? dbProducts : DUMMY_PRODUCTS
+      const normalized = base.map((p) => ({
+        ...p,
+        code: p.display_code,
+        name: p.ai_title,
+        image: p.thumbnail_url,
+        link: p.short_link,
+      }))
 
       let viewsData = [];
       if (supabase) {
@@ -391,26 +387,26 @@ export default function Home() {
 
       const viewsMap = new Map()
       for (const row of viewsData) {
-        viewsMap.set(String(row.code), row.total_views ?? row.count ?? 0)
+        viewsMap.set(String(row.product_code ?? row.code), row.total_views ?? row.count ?? 0)
       }
 
       // --- [V9 Engine: Two-Track 랭킹 적용] ---
-      let realTrendingData =[];
+      let realTrendingData = [];
       if (supabase) {
         const { data, error } = await supabase.rpc('get_real_trending_products');
         if (!error && data) realTrendingData = data;
       }
 
-      const merged = sheetProducts.map((p) => ({
+      const merged = normalized.map((p) => ({
         ...p,
-        views: viewsMap.get(String(p.code)) ?? 0,
+        views: viewsMap.get(String(p.product_code)) ?? 0,
       }));
 
       if (realTrendingData && realTrendingData.length > 0) {
         const rankMap = new Map(realTrendingData.map((item, index) => [String(item.product_code), index]));
         merged.sort((a, b) => {
-          const rankA = rankMap.has(String(a.code)) ? rankMap.get(String(a.code)) : 999999;
-          const rankB = rankMap.has(String(b.code)) ? rankMap.get(String(b.code)) : 999999;
+          const rankA = rankMap.has(String(a.product_code)) ? rankMap.get(String(a.product_code)) : 999999;
+          const rankB = rankMap.has(String(b.product_code)) ? rankMap.get(String(b.product_code)) : 999999;
           return rankA - rankB;
         });
         setProducts(merged);
@@ -438,10 +434,8 @@ export default function Home() {
     { key: '자동차용품', label: '🏎️자동차용품' },
   ]
 
-  const stripEmoji = (str) => str.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F]/gu, '').trim()
-
   const categories = useMemo(() => {
-    const existingKeys = new Set(products.map((p) => stripEmoji(p.category || '')))
+    const existingKeys = new Set(products.map((p) => p.category || ''))
     return CATEGORY_ORDER.filter((c) => existingKeys.has(c.key))
   }, [products])
 
@@ -450,7 +444,7 @@ export default function Home() {
 
   const filteredProducts = useMemo(() => {
     if (effectiveTab === '전체') return products
-    return products.filter((p) => stripEmoji(p.category || '') === effectiveTab)
+    return products.filter((p) => p.category === effectiveTab)
   }, [products, effectiveTab])
 
   const hasMore = visibleCount < filteredProducts.length
@@ -491,18 +485,19 @@ export default function Home() {
       window.gtag('event', 'click_product', {
         'event_category': 'Outbound Link',
         'event_label': product.name,
-        'product_code': String(product.code),
+        'product_code': String(product.product_code),
+        'display_code': String(product.display_code),
         'value': 1
       });
     }
 
-    let targetUrl = product.link || product.shortLink || product.longLink;
-    if (!targetUrl) return; 
+    let targetUrl = product.short_link || product.link;
+    if (!targetUrl) return;
     if (!targetUrl.startsWith('http')) targetUrl = 'https://' + targetUrl;
 
     if (supabase) {
       try {
-        await supabase.rpc('increment_daily_view', { p_product_code: String(product.code) });
+        await supabase.rpc('increment_daily_view', { p_product_code: String(product.product_code) });
       } catch (err) {
         console.warn("View API Error:", err);
       }
@@ -518,7 +513,7 @@ export default function Home() {
     const trimmed = query.trim();
     if (!trimmed) return;
     
-    const found = products.find((p) => String(p.code).trim() === trimmed);
+    const found = products.find((p) => String(p.display_code).trim() === trimmed);
     if (found) {
       await handleClickProduct(found);
     } else {
@@ -617,7 +612,7 @@ export default function Home() {
       if (pad) base64 += '='.repeat(4 - pad);
       const decodedCode = atob(base64);
 
-      const found = products.find(p => String(p.code) === String(decodedCode));
+      const found = products.find(p => String(p.display_code) === String(decodedCode));
       if (found) {
         handleClickProduct(found);
       } else {
@@ -719,7 +714,7 @@ export default function Home() {
                 </div>
                 <div ref={rankingRef} onMouseDown={onRankingMouseDown} className="-mx-5 px-5 flex gap-3 overflow-x-auto no-scrollbar pb-1 select-none cursor-grab active:cursor-grabbing">
                   {topProducts.map((p, i) => (
-                    <RankingCard key={p.code} product={p} rank={i + 1} onClickProduct={handleClickProduct} badge={i < 3 ? badges[i] : null} isDragged={isDragged} />
+                    <RankingCard key={p.product_code} product={p} rank={i + 1} onClickProduct={handleClickProduct} badge={i < 3 ? badges[i] : null} isDragged={isDragged} />
                   ))}
                 </div>
               </section>
