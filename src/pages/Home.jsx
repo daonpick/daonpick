@@ -511,6 +511,7 @@ export default function Home() {
       }
     }
 
+    window.history.replaceState(null, '', '/');
     window.location.href = targetUrl;
   }, [addRecentView]);
 
@@ -539,11 +540,89 @@ export default function Home() {
     }
   }, [showGoldenTicket]);
 
+  // V9 Engine: BFCache Trap Breaker (뒤로가기 무한로딩 방어)
+  useEffect(() => {
+    const handlePageShow = (event) => {
+      const isFromBFCache = event.persisted;
+      const isStuckState = !window.location.hash && showGoldenTicket;
+
+      if (isFromBFCache || isStuckState) {
+        setShowGoldenTicket(false);
+        setLoading(false);
+        setQuery('');
+        window.history.replaceState(null, '', '/');
+
+        if (isFromBFCache) {
+          window.location.reload();
+        }
+      }
+    };
+
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, [showGoldenTicket]);
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // V9 Engine: 트래픽 추적 파이프라인 [Priority 2]
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const trafficParams = useRef(null);
+  const trafficLogged = useRef(false);
+
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const pid = sp.get('pid');
+    const src = sp.get('src');
+    const acc = sp.get('acc');
+    const pt = sp.get('pt');
+
+    if (pid || src || acc || pt) {
+      trafficParams.current = {
+        product_code: pid || null,
+        source_platform: src || null,
+        account_id: acc || null,
+        prompt_type: pt || null,
+      };
+    }
+  }, []);
+
+  const logTraffic = useCallback((isConverted) => {
+    if (trafficLogged.current || !trafficParams.current || !supabase) return;
+    trafficLogged.current = true;
+
+    supabase.from('traffic_log').insert({
+      ...trafficParams.current,
+      is_converted: isConverted,
+      user_agent: navigator.userAgent,
+      referrer: document.referrer || null,
+      landed_at: new Date().toISOString(),
+    }).then(({ error }) => {
+      if (error) console.warn('[TrafficPipeline] Insert failed:', error);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!trafficParams.current) return;
+    const hash = window.location.hash;
+    if (hash && hash.length > 1) return;
+
+    const onInteract = () => logTraffic(true);
+
+    window.addEventListener('click', onInteract, { once: true, passive: true });
+    window.addEventListener('scroll', onInteract, { once: true, passive: true });
+
+    return () => {
+      window.removeEventListener('click', onInteract);
+      window.removeEventListener('scroll', onInteract);
+    };
+  }, [logTraffic]);
+
   // V9 Engine: 스텔스 브릿지 (Base64 디코딩 및 자동 라우팅)
   useEffect(() => {
-    if (products.length === 0) return; // 데이터 로드 완료 대기
+    if (products.length === 0) return;
     const hash = window.location.hash;
-    if (!hash || hash.length <= 1) return; // 루트 접속 시 방어막 작동
+    if (!hash || hash.length <= 1) return;
+
+    logTraffic(true);
 
     try {
       let base64 = hash.substring(1).replace(/-/g, '+').replace(/_/g, '/');
@@ -553,14 +632,14 @@ export default function Home() {
 
       const found = products.find(p => String(p.code) === String(decodedCode));
       if (found) {
-        handleClickProduct(found); // 상품 링크로 즉시 이동
+        handleClickProduct(found);
       } else {
-        setShowGoldenTicket(true); // 404 황금박스 트리거
+        setShowGoldenTicket(true);
       }
     } catch (e) {
       setShowGoldenTicket(true);
     }
-  }, [products, handleClickProduct]);
+  }, [products, handleClickProduct, logTraffic]);
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // [모듈 6] 렌더링 영역
