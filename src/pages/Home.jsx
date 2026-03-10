@@ -396,12 +396,30 @@ export default function Home() {
         viewsMap.set(String(row.code), row.total_views ?? row.count ?? 0)
       }
 
+      // --- [V9 Engine: Two-Track 랭킹 적용] ---
+      let realTrendingData =[];
+      if (supabase) {
+        const { data, error } = await supabase.rpc('get_real_trending_products');
+        if (!error && data) realTrendingData = data;
+      }
+
       const merged = sheetProducts.map((p) => ({
         ...p,
         views: viewsMap.get(String(p.code)) ?? 0,
-      }))
+      }));
 
-      setProducts(shuffle(merged))
+      if (realTrendingData && realTrendingData.length > 0) {
+        const rankMap = new Map(realTrendingData.map((item, index) => [String(item.product_code), index]));
+        merged.sort((a, b) => {
+          const rankA = rankMap.has(String(a.code)) ? rankMap.get(String(a.code)) : 999999;
+          const rankB = rankMap.has(String(b.code)) ? rankMap.get(String(b.code)) : 999999;
+          return rankA - rankB;
+        });
+        setProducts(merged);
+      } else {
+        setProducts(merged.sort((a, b) => b.views - a.views));
+      }
+
       setLoading(false)
     }
     load()
@@ -409,7 +427,7 @@ export default function Home() {
   }, [])
 
   const navButtons = useMemo(() => settings.filter((s) => s.type === 'button'), [settings])
-  const topProducts = useMemo(() => [...products].sort((a, b) => (b.views ?? 0) - (a.views ?? 0)).slice(0, 10), [products])
+  const topProducts = useMemo(() => [...products].slice(0, 10),[products])
 
   const CATEGORY_ORDER = [
     { key: '주방용품', label: '🍽️주방용품' },
@@ -506,15 +524,43 @@ export default function Home() {
     if (found) {
       await handleClickProduct(found);
     } else {
-      // 에러 토스트 대신 기분 좋은 황금 팝업 띄우기
       setShowGoldenTicket(true);
-      
-      // 2초 동안 유저가 글을 읽고 즐거워할 시간을 준 뒤 골드박스로 이동!
-      setTimeout(() => {
-        window.location.href = GOLDBOX_URL;
-      }, 2000);
     }
   }, [query, products, handleClickProduct]);
+
+  // V9 Engine: 무한루프 Trap Breaker (History Hijacking)
+  useEffect(() => {
+    if (showGoldenTicket) {
+      const timer = setTimeout(() => {
+        window.history.replaceState(null, '', '/');
+        window.location.href = GOLDBOX_URL;
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [showGoldenTicket]);
+
+  // V9 Engine: 스텔스 브릿지 (Base64 디코딩 및 자동 라우팅)
+  useEffect(() => {
+    if (products.length === 0) return; // 데이터 로드 완료 대기
+    const hash = window.location.hash;
+    if (!hash || hash.length <= 1) return; // 루트 접속 시 방어막 작동
+
+    try {
+      let base64 = hash.substring(1).replace(/-/g, '+').replace(/_/g, '/');
+      const pad = base64.length % 4;
+      if (pad) base64 += '='.repeat(4 - pad);
+      const decodedCode = atob(base64);
+
+      const found = products.find(p => String(p.code) === String(decodedCode));
+      if (found) {
+        handleClickProduct(found); // 상품 링크로 즉시 이동
+      } else {
+        setShowGoldenTicket(true); // 404 황금박스 트리거
+      }
+    } catch (e) {
+      setShowGoldenTicket(true);
+    }
+  }, [products, handleClickProduct]);
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // [모듈 6] 렌더링 영역
