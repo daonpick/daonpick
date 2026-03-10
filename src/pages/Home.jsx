@@ -572,15 +572,13 @@ export default function Home() {
     const sp = new URLSearchParams(window.location.search);
     const pid = sp.get('pid');
     const src = sp.get('src');
-    const acc = sp.get('acc');
     const pt = sp.get('pt');
 
-    if (pid || src || acc || pt) {
+    if (pid || src || pt) {
       trafficParams.current = {
         product_code: pid || null,
         source_platform: src || null,
-        account_id: acc || null,
-        prompt_type: pt || null,
+        emotion_tag: pt || null,
       };
     }
   }, []);
@@ -589,15 +587,18 @@ export default function Home() {
     if (trafficLogged.current || !trafficParams.current || !supabase) return;
     trafficLogged.current = true;
 
-    supabase.from('traffic_log').insert({
+    const payload = {
+      session_id: crypto.randomUUID(),
       ...trafficParams.current,
       is_converted: isConverted,
       user_agent: navigator.userAgent,
       referrer: document.referrer || null,
       landed_at: new Date().toISOString(),
-    }).then(({ error }) => {
-      if (error) console.warn('[TrafficPipeline] Insert failed:', error);
-    });
+    };
+
+    Promise.resolve().then(() =>
+      supabase.from('traffic_log').insert(payload)
+    ).catch((err) => console.error('[TrafficPipeline]', err));
   }, []);
 
   useEffect(() => {
