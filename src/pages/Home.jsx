@@ -565,48 +565,37 @@ export default function Home() {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // V9 Engine: 트래픽 추적 파이프라인 [Priority 2]
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const trafficParams = useRef(null);
   const trafficLogged = useRef(false);
+
+  const logTraffic = useCallback(() => {
+    if (trafficLogged.current || !supabase) return;
+    const sp = new URLSearchParams(window.location.search);
+    if (!sp.get('pid') && !sp.get('src') && !sp.get('pt')) return;
+    trafficLogged.current = true;
+
+    const insertData = {
+      session_id: crypto.randomUUID(),
+      product_code: sp.get('pid'),
+      source_platform: sp.get('src'),
+      emotion_tag: sp.get('pt'),
+      is_converted: true,
+      geo_city: 'Unknown',
+    };
+
+    supabase.from('traffic_log').insert(insertData).then(() => {
+      console.log('Traffic logged successfully');
+    }).catch((err) => {
+      console.error('Traffic log failed:', err);
+    });
+  }, []);
 
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
-    const pid = sp.get('pid');
-    const src = sp.get('src');
-    const pt = sp.get('pt');
-
-    if (pid || src || pt) {
-      trafficParams.current = {
-        product_code: pid || null,
-        source_platform: src || null,
-        emotion_tag: pt || null,
-      };
-    }
-  }, []);
-
-  const logTraffic = useCallback((isConverted) => {
-    if (trafficLogged.current || !trafficParams.current || !supabase) return;
-    trafficLogged.current = true;
-
-    const payload = {
-      session_id: crypto.randomUUID(),
-      ...trafficParams.current,
-      is_converted: isConverted,
-      user_agent: navigator.userAgent,
-      referrer: document.referrer || null,
-      landed_at: new Date().toISOString(),
-    };
-
-    Promise.resolve().then(() =>
-      supabase.from('traffic_log').insert(payload)
-    ).catch((err) => console.error('[TrafficPipeline]', err));
-  }, []);
-
-  useEffect(() => {
-    if (!trafficParams.current) return;
+    if (!sp.get('pid') && !sp.get('src') && !sp.get('pt')) return;
     const hash = window.location.hash;
     if (hash && hash.length > 1) return;
 
-    const onInteract = () => logTraffic(true);
+    const onInteract = () => logTraffic();
 
     window.addEventListener('click', onInteract, { once: true, passive: true });
     window.addEventListener('scroll', onInteract, { once: true, passive: true });
@@ -623,7 +612,7 @@ export default function Home() {
     const hash = window.location.hash;
     if (!hash || hash.length <= 1) return;
 
-    logTraffic(true);
+    logTraffic();
 
     try {
       let base64 = hash.substring(1).replace(/-/g, '+').replace(/_/g, '/');
