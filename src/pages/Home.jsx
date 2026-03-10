@@ -87,10 +87,17 @@ function useHorizontalScroll() {
 // [모듈 2] 설정 및 헬퍼 함수
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const PRODUCTS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSje1PMCjbJe528NHFMP4X5OEauML49AaRVb2sHUhJDfe3JwBub6raAxk4Zg-D-km2Cugw4xTy9E4cA/pub?output=csv'
-const SETTINGS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSiix1Lxl3nmpURsLENJdkZexya5dfVBPwElybHj7goPEWmYQYYCm7fftJSt0dVPkhDMgLbpMJ4b_rg/pub?output=csv'
 
 // ⭐ 쿠팡 골드박스 링크 (오류 번호 입력 시 이동)
 const GOLDBOX_URL = 'https://link.coupang.com/a/dQHV5K';
+
+const CATEGORY_BUTTONS = [
+  { label: '🔒 프라이빗', url: 'https://link.coupang.com/a/dNKFsQ' },
+  { label: '✨ 베네핏', url: 'https://link.coupang.com/a/dNKLhu' },
+  { label: '⚡ 오픈런', url: 'https://link.coupang.com/a/dNKQGF' },
+  { label: '🍽️ 다이닝', url: 'https://link.coupang.com/a/dNKRLu' },
+  { label: '✈️ 스테이', url: 'https://link.coupang.com/a/dNKLIg' },
+]
 
 const formatViewCount = (realCount, code) => {
   const views = Number(realCount) || 0;
@@ -143,10 +150,6 @@ const fetchCSV = (url) => {
 const DUMMY_PRODUCTS = [
   { id: '1', code: '10024', name: '무선 야채 다지기', category: '주방용품', link: 'https://example.com', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10024' },
   { id: '2', code: '10025', name: '규조토 발매트', category: '생활잡화', link: 'https://example.com', image: 'https://placehold.co/300x400/e8e8e8/191919?text=10025' },
-]
-
-const DUMMY_SETTINGS = [
-  { type: 'fallback', label: 'fallback', url: 'https://example.com/event' },
 ]
 
 const ITEMS_PER_PAGE = 10
@@ -306,7 +309,6 @@ const InfiniteProductGrid = memo(function InfiniteProductGrid({ filteredProducts
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export default function Home() {
   const [products, setProducts] = useState([])
-  const [settings, setSettings] = useState(DUMMY_SETTINGS)
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE)
@@ -371,14 +373,10 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const [csvProducts, csvSettings] = await Promise.all([
-        fetchCSV(PRODUCTS_CSV_URL),
-        fetchCSV(SETTINGS_CSV_URL),
-      ])
+      const csvProducts = await fetchCSV(PRODUCTS_CSV_URL)
       if (cancelled) return
 
       const sheetProducts = csvProducts?.length ? csvProducts : DUMMY_PRODUCTS
-      if (csvSettings?.length) setSettings(csvSettings)
 
       let viewsData = [];
       if (supabase) {
@@ -426,7 +424,6 @@ export default function Home() {
     return () => { cancelled = true }
   }, [])
 
-  const navButtons = useMemo(() => settings.filter((s) => s.type === 'button'), [settings])
   const topProducts = useMemo(() => [...products].slice(0, 10),[products])
 
   const CATEGORY_ORDER = [
@@ -683,18 +680,16 @@ export default function Home() {
           </button>
         </form>
 
-        {/* Nav Buttons */}
-        {navButtons.length > 0 && (
-          <div ref={(el) => { navRef.current = el; navSectionRef.current = el }} onMouseDown={onNavMouseDown} className="mt-5 -mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar select-none cursor-grab active:cursor-grabbing">
-            {navButtons.map((btn, i) => (
-              <button key={btn.label} onClick={() => { window.location.href = btn.url }}
-                      className={`shrink-0 px-4 py-2 rounded-full bg-gray-100 text-[13px] font-medium text-gray-600 active:scale-95 transition-transform ${navVisible ? '' : 'opacity-0'}`}
-                      style={navVisible ? { animation: 'slide-in-left 0.5s ease-out forwards', animationDelay: `${i * 200}ms`, opacity: 0 } : undefined}>
-                {btn.label}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Category Buttons (Static) */}
+        <div ref={(el) => { navRef.current = el; navSectionRef.current = el }} onMouseDown={onNavMouseDown} className="mt-5 -mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar select-none cursor-grab active:cursor-grabbing">
+          {CATEGORY_BUTTONS.map((btn, i) => (
+            <button key={btn.label} onClick={() => { window.location.href = btn.url }}
+                    className={`shrink-0 px-4 py-2 rounded-full bg-gray-100 text-[13px] font-medium text-gray-600 active:scale-95 transition-transform ${navVisible ? '' : 'opacity-0'}`}
+                    style={navVisible ? { animation: 'slide-in-left 0.5s ease-out forwards', animationDelay: `${i * 200}ms`, opacity: 0 } : undefined}>
+              {btn.label}
+            </button>
+          ))}
+        </div>
 
         {/* Loading Skeleton */}
         {loading && (
