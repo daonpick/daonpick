@@ -372,22 +372,6 @@ export default function Home() {
         link: p.short_link,
       }))
 
-      let viewsData = [];
-      if (supabase) {
-        const { data, error } = await supabase.rpc('get_weekly_views');
-        if (!error && data) {
-          viewsData = data;
-        } else {
-          const fallback = await supabase.from('views').select('*');
-          if (fallback.data) viewsData = fallback.data;
-        }
-      }
-
-      const viewsMap = new Map()
-      for (const row of viewsData) {
-        viewsMap.set(String(row.product_code ?? row.code), row.total_views ?? row.count ?? 0)
-      }
-
       // --- [V9 Engine: Two-Track 랭킹 적용] ---
       let realTrendingData = [];
       if (supabase) {
@@ -397,7 +381,7 @@ export default function Home() {
 
       const merged = normalized.map((p) => ({
         ...p,
-        views: viewsMap.get(String(p.product_code)) ?? 0,
+        views: Number(p.total_views) || 0,
       }));
 
       if (realTrendingData && realTrendingData.length > 0) {
@@ -418,7 +402,7 @@ export default function Home() {
     return () => { cancelled = true }
   }, [])
 
-  const topProducts = useMemo(() => [...products].slice(0, 10),[products])
+  const topProducts = useMemo(() => [...products].sort((a, b) => (b.views ?? 0) - (a.views ?? 0)).slice(0, 10), [products])
 
   const CATEGORY_ORDER = [
     { key: '주방용품', label: '🍽️주방용품' },
@@ -497,8 +481,8 @@ export default function Home() {
     window.location.href = targetUrl;
 
     if (supabase) {
-      supabase.rpc('increment_base_views', { p_code: String(product.product_code) }).catch(() => {});
-      supabase.rpc('increment_daily_view', { p_product_code: String(product.product_code) }).catch(() => {});
+      supabase.rpc('increment_base_views', { p_code: String(product.product_code) }).then(({ error }) => { if (error) console.error(error); });
+      supabase.rpc('increment_daily_view', { p_product_code: String(product.product_code) }).then(({ error }) => { if (error) console.error(error); });
     }
   }, [addRecentView]);
 
