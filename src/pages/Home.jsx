@@ -384,17 +384,7 @@ export default function Home() {
         views: Number(p.total_views) || 0,
       }));
 
-      if (realTrendingData && realTrendingData.length > 0) {
-        const rankMap = new Map(realTrendingData.map((item, index) => [String(item.product_code), index]));
-        merged.sort((a, b) => {
-          const rankA = rankMap.has(String(a.product_code)) ? rankMap.get(String(a.product_code)) : 999999;
-          const rankB = rankMap.has(String(b.product_code)) ? rankMap.get(String(b.product_code)) : 999999;
-          return rankA - rankB;
-        });
-        setProducts(merged);
-      } else {
-        setProducts(merged.sort((a, b) => b.views - a.views));
-      }
+      setProducts(shuffle(merged));
 
       setLoading(false)
     }
