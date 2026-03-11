@@ -96,17 +96,15 @@ const CATEGORY_BUTTONS = [
   { label: '✈️ 스테이', url: 'https://link.coupang.com/a/dNKLIg' },
 ]
 
-const formatViewCount = (realCount, code) => {
-  const views = Number(realCount) || 0;
-  const productCode = Number(code) || 0;
+const formatFakeViews = (baseViews, productCode) => {
+  const numericStr = String(productCode ?? '').replace(/\D/g, '');
+  const suffix = ((Number(numericStr) || 0) % 90) + 10;
+  const base = Number(baseViews) || 0;
+  const fakeNum = base === 0 ? suffix : Number(String(base) + String(suffix));
 
-  const suffix = (productCode % 90) + 10;
-  const fakeNum = views === 0 ? suffix : Number(String(views) + String(suffix));
-
-  if (fakeNum < 1000) return String(fakeNum);
-  if (fakeNum < 10000) return (fakeNum / 1000).toFixed(1) + '천';
-  if (fakeNum < 1000000) return (fakeNum / 10000).toFixed(1) + '만';
-  return Math.floor(fakeNum / 10000).toLocaleString() + '만';
+  if (fakeNum >= 10000) return (fakeNum / 10000).toFixed(1) + '만';
+  if (fakeNum >= 1000) return (fakeNum / 1000).toFixed(1) + '천';
+  return fakeNum.toLocaleString();
 };
 
 const BADGE_TEMPLATES = [
@@ -205,7 +203,7 @@ function RankingCard({ product, rank, onClickProduct, badge, isDragged }) {
       <div className="mt-1.5 px-0.5">
         <p className="text-sm font-bold text-gray-900 tracking-tight line-clamp-2 leading-snug">{product.name}</p>
         <span className="flex items-center gap-0.5 text-[11px] text-gray-400 mt-0.5">
-          <Eye className="w-3 h-3" /> {formatViewCount(product.views, product.code)}
+          <Eye className="w-3 h-3" /> {formatFakeViews(product.views, product.product_code)}
         </span>
       </div>
     </div>
@@ -238,7 +236,7 @@ function ProductCard({ product, onClickProduct }) {
           <p className="text-[14px] font-bold text-[#222] leading-snug truncate tracking-tight">{product.name}</p>
           <div className="mt-1.5 flex items-center justify-between">
             <span className="flex items-center gap-1 text-xs text-gray-400">
-              <Eye className="w-3 h-3" /> {formatViewCount(product.views, product.code)}
+              <Eye className="w-3 h-3" /> {formatFakeViews(product.views, product.product_code)}
             </span>
             <span className="flex items-center gap-0.5 text-xs font-semibold text-[#F37021]">
               View <ArrowRight className="w-3.5 h-3.5" />
@@ -496,6 +494,8 @@ export default function Home() {
     if (!targetUrl.startsWith('http')) targetUrl = 'https://' + targetUrl;
 
     if (supabase) {
+      supabase.rpc('increment_base_views', { p_code: String(product.product_code) }).catch(() => {});
+
       try {
         await supabase.rpc('increment_daily_view', { p_product_code: String(product.product_code) });
       } catch (err) {
