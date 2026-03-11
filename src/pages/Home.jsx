@@ -476,7 +476,7 @@ export default function Home() {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // ⭐ 클릭 & 검색 핸들러
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const handleClickProduct = useCallback(async (product) => {
+  const handleClickProduct = useCallback((product) => {
     addRecentView(product);
 
     if (window.gtag) {
@@ -493,18 +493,13 @@ export default function Home() {
     if (!targetUrl) return;
     if (!targetUrl.startsWith('http')) targetUrl = 'https://' + targetUrl;
 
-    if (supabase) {
-      supabase.rpc('increment_base_views', { p_code: String(product.product_code) }).catch(() => {});
-
-      try {
-        await supabase.rpc('increment_daily_view', { p_product_code: String(product.product_code) });
-      } catch (err) {
-        console.warn("View API Error:", err);
-      }
-    }
-
     window.history.replaceState(null, '', '/');
     window.location.href = targetUrl;
+
+    if (supabase) {
+      supabase.rpc('increment_base_views', { p_code: String(product.product_code) }).catch(() => {});
+      supabase.rpc('increment_daily_view', { p_product_code: String(product.product_code) }).catch(() => {});
+    }
   }, [addRecentView]);
 
   // ⭐ 검색 시 번호가 없으면 황금 티켓 팝업 실행
