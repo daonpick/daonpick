@@ -1,318 +1,51 @@
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// [모듈 0] Imports 및 전역 설정
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-import { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Helmet } from 'react-helmet-async'
-import { Search, Eye, ChevronLeft, ChevronRight, ArrowRight, Menu, Heart } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, Menu } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import { useStore } from '../store/useStore'
+
+import useHorizontalScroll from '../hooks/useHorizontalScroll'
+import { shuffle, getUniqueBadges } from '../utils/formatters'
+import { CATEGORY_BUTTONS, GOLDBOX_URL, LOADING_PHRASES, ITEMS_PER_PAGE, getOosThemeRoute } from '../utils/constants'
+
 import Sidebar from '../components/Sidebar'
 import LuckyCard from '../components/LuckyCard'
+import RankingCard from '../components/Product/RankingCard'
+import SkeletonRanking from '../components/Product/SkeletonRanking'
+import SkeletonGrid from '../components/Product/SkeletonGrid'
+import InfiniteProductGrid from '../components/Product/InfiniteProductGrid'
+import OosFallbackModal from '../components/modals/OosFallbackModal'
+import GoldenTicketModal from '../components/modals/GoldenTicketModal'
+import VvipLoungeModal from '../components/modals/VvipLoungeModal'
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// [모듈 1] 커스텀 훅: 가로 스크롤
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function useHorizontalScroll() {
-  const ref = useRef(null)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
-  const drag = useRef({ active: false, startX: 0, sl: 0, moved: false })
-
-  const check = useCallback(() => {
-    const el = ref.current
-    if (!el) return
-    setCanScrollLeft(el.scrollLeft > 1)
-    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 1)
-  }, [])
-
-  const scrollDir = useCallback((dir) => {
-    const el = ref.current
-    if (!el) return
-    el.scrollTo({ left: el.scrollLeft + dir * 180, behavior: 'smooth' })
-  }, [])
-
-  const isDragged = useCallback(() => drag.current.moved, [])
-
-  const onMouseDown = useCallback((e) => {
-    if (e.button !== 0) return
-    const el = ref.current
-    if (!el) return
-    e.preventDefault()
-    drag.current = { active: true, startX: e.clientX, sl: el.scrollLeft, moved: false }
-
-    const onMouseMove = (ev) => {
-      if (!drag.current.active) return
-      ev.preventDefault()
-      const dx = ev.clientX - drag.current.startX
-      if (Math.abs(dx) > 3) drag.current.moved = true
-      el.scrollLeft = drag.current.sl - dx
-    }
-
-    const onMouseUp = () => {
-      drag.current.active = false
-      document.removeEventListener('mousemove', onMouseMove)
-      document.removeEventListener('mouseup', onMouseUp)
-      setTimeout(() => { drag.current.moved = false }, 0)
-    }
-
-    document.addEventListener('mousemove', onMouseMove)
-    document.addEventListener('mouseup', onMouseUp)
-  }, [])
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-
-    check()
-    el.addEventListener('scroll', check, { passive: true })
-
-    const onWheel = (e) => {
-      if (el.scrollWidth <= el.clientWidth) return
-      e.preventDefault()
-      el.scrollLeft += (e.deltaY || e.deltaX)
-    }
-    el.addEventListener('wheel', onWheel, { passive: false })
-
-    return () => {
-      el.removeEventListener('scroll', check)
-      el.removeEventListener('wheel', onWheel)
-    }
-  }, [check])
-
-  return { ref, canScrollLeft, canScrollRight, scrollDir, isDragged, onMouseDown }
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// [모듈 2] 설정 및 헬퍼 함수
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// ⭐ 쿠팡 골드박스 링크 (오류 번호 입력 시 이동)
-const GOLDBOX_URL = 'https://link.coupang.com/a/dQHV5K';
-
-const CATEGORY_BUTTONS = [
-  { label: '💎 블랙라벨', url: 'https://link.coupang.com/a/dNKFsQ' },
-  { label: '🎁 테마라운지', url: 'https://link.coupang.com/a/dNKLhu' },
-  { label: '⚡ 플래시딜', url: 'https://link.coupang.com/a/dNKQGF' },
-  { label: '🥗 프레시마켓', url: 'https://link.coupang.com/a/dNKRLu' },
-  { label: '✈️ 히든게이트', url: 'https://link.coupang.com/a/dNKLIg' },
-]
-
-const formatFakeViews = (baseViews, productCode) => {
-  const numericStr = String(productCode ?? '').replace(/\D/g, '');
-  const suffix = ((Number(numericStr) || 0) % 90) + 10;
-  const base = Number(baseViews) || 0;
-  const fakeNum = base === 0 ? suffix : Number(String(base) + String(suffix));
-
-  if (fakeNum >= 10000) return (fakeNum / 10000).toFixed(1) + '만';
-  if (fakeNum >= 1000) return (fakeNum / 1000).toFixed(1) + '천';
-  return fakeNum.toLocaleString();
-};
-
-const BADGE_TEMPLATES = [
-  () => '🔥 주간 급상승',
-  () => `👁️ ${Math.floor(Math.random() * 301) + 200}명 보고 있음`,
-  () => '📦 재구매율 1위',
-  () => '⚡ 마감 임박',
-  () => '⭐ 만족도 99%',
-  () => '🏆 MD 강력 추천',
-]
-
-function shuffle(arr) {
-  const a = [...arr]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]]
-  }
-  return a
-}
-
-const getUniqueBadges = () => shuffle(BADGE_TEMPLATES).slice(0, 3).map((fn) => fn())
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// [모듈 3] 더미 Fallback (Supabase 연결 실패 시)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const DUMMY_PRODUCTS = [
   { product_code: '0', display_code: '10024', ai_title: '무선 야채 다지기', category: '주방용품', short_link: 'https://example.com', thumbnail_url: 'https://placehold.co/300x400/e8e8e8/191919?text=10024' },
   { product_code: '1', display_code: '10025', ai_title: '규조토 발매트', category: '생활잡화', short_link: 'https://example.com', thumbnail_url: 'https://placehold.co/300x400/e8e8e8/191919?text=10025' },
 ]
 
-const ITEMS_PER_PAGE = 10
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// [모듈 4] UI 서브 컴포넌트
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function SkeletonRanking() {
-  return (
-    <div className="flex gap-4 overflow-hidden">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="shrink-0 w-36 animate-pulse">
-          <div className="aspect-[3/4] rounded-2xl bg-gray-200" />
-          <div className="mt-2 h-3 w-20 rounded bg-gray-200" />
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function SkeletonGrid() {
-  return (
-    <div className="grid grid-cols-2 gap-4">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="animate-pulse">
-          <div className="aspect-square rounded-2xl bg-gray-200" />
-          <div className="mt-2.5 space-y-2">
-            <div className="h-4 w-3/4 rounded bg-gray-200" />
-            <div className="h-3 w-1/2 rounded bg-gray-200" />
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function RankingCard({ product, rank, onClickProduct, badge, isDragged }) {
-  const { toggleWishlist, isWishlisted } = useStore()
-  const wishlisted = isWishlisted(product.code)
-
-  return (
-    <div onClick={() => { if (!isDragged || !isDragged()) onClickProduct(product) }}
-         className="shrink-0 w-40 text-left cursor-pointer select-none active:scale-[0.97] transition-transform"
-         style={{ WebkitTouchCallout: 'none' }}>
-      <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 shadow-sm">
-        <img src={product.image} alt={product.name} draggable={false} loading="lazy" decoding="async"
-             onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/f3f4f6/9ca3af?text=No+Image' }}
-             className="w-full h-full object-cover pointer-events-none" />
-        {badge && (
-          <span className="badge-shimmer absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-white/90 backdrop-blur text-[#F37021] font-bold text-[10px]"
-                style={{ '--shimmer-delay': `${(rank - 1) * 0.8}s` }}>
-            <span className="relative z-10">{badge}</span>
-          </span>
-        )}
-        <button aria-label={wishlisted ? '찜 해제' : '찜하기'} className="absolute top-2 right-2 z-10" onClick={(e) => { e.stopPropagation(); toggleWishlist(product) }}>
-          <Heart className={`w-5 h-5 drop-shadow-lg transition-colors ${wishlisted ? 'text-red-500 fill-red-500' : 'text-white/80'}`} />
-        </button>
-        <span className="absolute bottom-1 left-2 text-6xl font-black italic leading-none tracking-tighter"
-              style={{
-                color: '#F37021',
-                WebkitTextStroke: '2px rgba(255,255,255,0.85)',
-                paintOrder: 'stroke fill',
-                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
-              }}>
-          {rank}
-        </span>
-      </div>
-      <div className="mt-1.5 px-0.5">
-        <p className="text-sm font-bold text-gray-900 tracking-tight line-clamp-2 leading-snug">{product.name}</p>
-        <span className="flex items-center gap-0.5 text-[11px] text-gray-400 mt-0.5">
-          <Eye className="w-3 h-3" /> {formatFakeViews(product.views, product.product_code)}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-function ProductCard({ product, onClickProduct }) {
-  const { toggleWishlist, isWishlisted } = useStore()
-  const wishlisted = isWishlisted(product.code)
-
-  return (
-    <div onClick={() => onClickProduct(product)}
-         className="w-full select-none cursor-pointer active:scale-[0.97] transition-transform"
-         style={{ WebkitTouchCallout: 'none' }}>
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <div className="relative aspect-square overflow-hidden bg-gray-100">
-          <img src={product.image} alt={product.name} draggable={false} loading="lazy" decoding="async"
-               onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/f3f4f6/9ca3af?text=No+Image' }}
-               className="w-full h-full object-cover pointer-events-none" />
-          {product.display_code && (
-            <div className="absolute top-0 left-0 bg-[#191F28]/80 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1.5 rounded-br-xl z-10">
-              {product.display_code}
-            </div>
-          )}
-          <button aria-label={wishlisted ? '찜 해제' : '찜하기'} className="absolute top-2 right-2 z-10" onClick={(e) => { e.stopPropagation(); toggleWishlist(product) }}>
-            <Heart className={`w-5 h-5 drop-shadow-lg transition-colors ${wishlisted ? 'text-red-500 fill-red-500' : 'text-white/70'}`} />
-          </button>
-        </div>
-        <div className="p-3">
-          <p className="text-[14px] font-bold text-[#222] leading-snug truncate tracking-tight">{product.name}</p>
-          <div className="mt-1.5 flex items-center justify-between">
-            <span className="flex items-center gap-1 text-xs text-gray-400">
-              <Eye className="w-3 h-3" /> {formatFakeViews(product.views, product.product_code)}
-            </span>
-            <span className="flex items-center gap-0.5 text-xs font-semibold text-[#F37021]">
-              View <ArrowRight className="w-3.5 h-3.5" />
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-const InfiniteProductGrid = memo(function InfiniteProductGrid({ filteredProducts, visibleCount, hasMore, onLoadMore, onClickProduct }) {
-  const loadMoreRef = useRef(null)
-
-  useEffect(() => {
-    const el = loadMoreRef.current
-    if (!el) return
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) onLoadMore()
-      },
-      { threshold: 0.1 }
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [hasMore, onLoadMore])
-
-  return (
-    <div className="mt-6">
-      <div className="grid grid-cols-2 gap-4">
-        {filteredProducts.slice(0, visibleCount).map((p, i) => {
-          const isNewBatch = i >= visibleCount - ITEMS_PER_PAGE
-          return (
-            <div key={p.product_code}
-                 className={isNewBatch ? 'opacity-0' : ''}
-                 style={isNewBatch ? { animation: 'slide-up 0.7s ease-out forwards', animationDelay: `${(i % ITEMS_PER_PAGE) * 200}ms` } : undefined}>
-              <ProductCard product={p} onClickProduct={onClickProduct} />
-            </div>
-          )
-        })}
-      </div>
-      {hasMore && (
-        <div ref={loadMoreRef} className="mt-6">
-          <SkeletonGrid />
-        </div>
-      )}
-    </div>
-  )
-})
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// [모듈 5] 메인 페이지 컴포넌트 (Home)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export default function Home() {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE)
-  const [activeTab, setActiveTab] = useState(undefined)
+  const [activeTab, setActiveTab] = useState('ALL')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [inputFocused, setInputFocused] = useState(false)
   const [typedText, setTypedText] = useState('')
   const [categoryVisible, setCategoryVisible] = useState(false)
-  const [navVisible, setNavVisible] = useState(false)
-  
-  // ⭐ 황금 티켓 팝업 상태 추가
+
   const [showGoldenTicket, setShowGoldenTicket] = useState(false)
+  const [showVvipModal, setShowVvipModal] = useState(false)
+  const [oosPopup, setOosPopup] = useState({ show: false, product: null })
+  const [loadingPhrase] = useState(() => LOADING_PHRASES[Math.floor(Math.random() * LOADING_PHRASES.length)])
 
   const { addRecentView } = useStore()
   const { ref: rankingRef, canScrollLeft, canScrollRight, scrollDir, isDragged, onMouseDown: onRankingMouseDown } = useHorizontalScroll()
   const { ref: categoryRef, onMouseDown: onCategoryMouseDown } = useHorizontalScroll()
-  const { ref: navRef, onMouseDown: onNavMouseDown } = useHorizontalScroll()
   const categorySectionRef = useRef(null)
   const categoryTabRef = useRef(null)
-  const navSectionRef = useRef(null)
 
+  // ━━━ Typewriter placeholder ━━━
   const PLACEHOLDER_PHRASES = useMemo(() => [
     '찾으시는 상품의 시크릿 번호가 있나요?',
     '내가 찾던 그 제품, 번호로 검색!',
@@ -353,6 +86,7 @@ export default function Home() {
     return () => clearTimeout(timer)
   }, [inputFocused, query, PLACEHOLDER_PHRASES])
 
+  // ━━━ Supabase 데이터 로드 ━━━
   useEffect(() => {
     let cancelled = false
     async function load() {
@@ -372,7 +106,6 @@ export default function Home() {
         link: p.short_link,
       }))
 
-      // --- [V9 Engine: Two-Track 랭킹 적용] ---
       let realTrendingData = [];
       if (supabase) {
         const { data, error } = await supabase.rpc('get_real_trending_products');
@@ -385,39 +118,24 @@ export default function Home() {
       }));
 
       setProducts(shuffle(merged));
-
       setLoading(false)
     }
     load()
     return () => { cancelled = true }
   }, [])
 
+  // ━━━ 파생 데이터 ━━━
   const topProducts = useMemo(() => [...products].sort((a, b) => (b.views ?? 0) - (a.views ?? 0)).slice(0, 10), [products])
 
-  const CATEGORY_ORDER = [
-    { key: '주방용품', label: '🍽️주방용품' },
-    { key: '생활용품', label: '🧺생활용품' },
-    { key: '가전디지털', label: '🎧가전디지털' },
-    { key: '인테리어', label: '🕯️인테리어' },
-    { key: '반려용품', label: '🐾반려용품' },
-    { key: '뷰티', label: '🧴뷰티' },
-    { key: '식품', label: '🍷식품' },
-    { key: '완구/취미', label: '🛹완구/취미' },
-    { key: '자동차용품', label: '🏎️자동차용품' },
-  ]
-
-  const categories = useMemo(() => {
-    const existingKeys = new Set(products.map((p) => p.category || ''))
-    return CATEGORY_ORDER.filter((c) => existingKeys.has(c.key))
-  }, [products])
-
-  const allCategories = useMemo(() => [{ key: '전체', label: '전체' }, ...categories], [categories])
-  const effectiveTab = activeTab !== undefined ? activeTab : '전체'
-
   const filteredProducts = useMemo(() => {
-    if (effectiveTab === '전체') return products
-    return products.filter((p) => p.category === effectiveTab)
-  }, [products, effectiveTab])
+    if (activeTab === 'ALL') return products
+    const btn = CATEGORY_BUTTONS.find((b) => b.id === activeTab)
+    if (!btn || !btn.dbPrefix) return products
+    return products.filter((p) => {
+      const cat = String(p.category || '')
+      return cat.startsWith(btn.dbPrefix)
+    })
+  }, [products, activeTab])
 
   const hasMore = visibleCount < filteredProducts.length
 
@@ -427,15 +145,7 @@ export default function Home() {
 
   useEffect(() => {
     setVisibleCount(ITEMS_PER_PAGE)
-  }, [effectiveTab])
-
-  useEffect(() => {
-    const navEl = navSectionRef.current
-    if (!navEl) return
-    const observer = new IntersectionObserver(([entry]) => setNavVisible(entry.isIntersecting), { threshold: 0.2 })
-    observer.observe(navEl)
-    return () => observer.disconnect()
-  }, [loading])
+  }, [activeTab])
 
   useEffect(() => {
     const el = categoryTabRef.current
@@ -447,9 +157,7 @@ export default function Home() {
 
   const badges = useMemo(() => getUniqueBadges(), [])
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ⭐ 클릭 & 검색 핸들러
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━ 클릭 & 검색 핸들러 ━━━
   const handleClickProduct = useCallback((product) => {
     addRecentView(product);
 
@@ -461,6 +169,11 @@ export default function Home() {
         'display_code': String(product.display_code),
         'value': 1
       });
+    }
+
+    if (product.is_oos === true) {
+      setOosPopup({ show: true, product });
+      return;
     }
 
     let targetUrl = product.short_link || product.link;
@@ -476,12 +189,19 @@ export default function Home() {
     }
   }, [addRecentView]);
 
-  // ⭐ 검색 시 번호가 없으면 황금 티켓 팝업 실행
+  const handleOosConfirm = useCallback(() => {
+    if (!oosPopup.product) return;
+    const route = getOosThemeRoute(oosPopup.product);
+    setOosPopup({ show: false, product: null });
+    window.history.replaceState(null, '', '/');
+    window.location.href = route.url;
+  }, [oosPopup.product]);
+
   const handleSearch = useCallback(async (e) => {
     e.preventDefault();
     const trimmed = query.trim();
     if (!trimmed) return;
-    
+
     const found = products.find((p) => String(p.display_code).trim() === trimmed);
     if (found) {
       await handleClickProduct(found);
@@ -490,7 +210,7 @@ export default function Home() {
     }
   }, [query, products, handleClickProduct]);
 
-  // V9 Engine: 무한루프 Trap Breaker (History Hijacking)
+  // ━━━ V9 Engine: 무한루프 Trap Breaker (History Hijacking) ━━━
   useEffect(() => {
     if (showGoldenTicket) {
       const timer = setTimeout(() => {
@@ -501,7 +221,7 @@ export default function Home() {
     }
   }, [showGoldenTicket]);
 
-  // V9 Engine: BFCache Trap Breaker (뒤로가기 무한로딩 방어)
+  // ━━━ V9 Engine: BFCache Trap Breaker ━━━
   useEffect(() => {
     const handlePageShow = (event) => {
       const isFromBFCache = event.persisted;
@@ -523,9 +243,7 @@ export default function Home() {
     return () => window.removeEventListener('pageshow', handlePageShow);
   }, [showGoldenTicket]);
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // V9 Engine: 트래픽 추적 파이프라인 [Priority 2]
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━ V9 Engine: 트래픽 추적 파이프라인 ━━━
   const trafficLogged = useRef(false);
 
   const logTraffic = useCallback(() => {
@@ -567,7 +285,7 @@ export default function Home() {
     };
   }, [logTraffic]);
 
-  // V9 Engine: 스텔스 브릿지 (Base64 디코딩 및 자동 라우팅)
+  // ━━━ V9 Engine: 스텔스 브릿지 (Base64 디코딩 및 자동 라우팅) ━━━
   useEffect(() => {
     if (products.length === 0) return;
     const hash = window.location.hash;
@@ -592,15 +310,14 @@ export default function Home() {
     }
   }, [products, handleClickProduct, logTraffic]);
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // [모듈 6] 렌더링 영역
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const seoTitle = effectiveTab === '전체'
+  // ━━━ SEO ━━━
+  const activeLabel = CATEGORY_BUTTONS.find((b) => b.id === activeTab)?.label || '전체'
+  const seoTitle = activeTab === 'ALL'
     ? '다온픽 | 영상 속 그 제품, 번호로 찾으세요'
-    : `다온픽 | ${effectiveTab} 상품 모아보기`
-  const seoDesc = effectiveTab === '전체'
+    : `다온픽 | ${activeLabel} 상품 모아보기`
+  const seoDesc = activeTab === 'ALL'
     ? '유튜브, 쇼츠 꿀템 정보를 번호 하나로 쉽고 빠르게 확인하세요.'
-    : `${effectiveTab} 카테고리의 인기 상품을 다온픽에서 확인하세요.`
+    : `${activeLabel} 카테고리의 인기 상품을 다온픽에서 확인하세요.`
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-[#FAFAFA] tracking-tight relative">
@@ -610,7 +327,7 @@ export default function Home() {
         <meta property="og:title" content={seoTitle} />
         <meta property="og:description" content={seoDesc} />
       </Helmet>
-      
+
       <div className="sticky top-0 z-50 w-full bg-gray-800">
         <p className="max-w-[480px] mx-auto px-4 py-1.5 text-[10px] text-gray-400 text-center leading-relaxed">
           이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
@@ -643,17 +360,6 @@ export default function Home() {
             <Search className="w-4 h-4" />
           </button>
         </form>
-
-        {/* Category Buttons (Static) */}
-        <div ref={(el) => { navRef.current = el; navSectionRef.current = el }} onMouseDown={onNavMouseDown} className="mt-5 -mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar select-none cursor-grab active:cursor-grabbing">
-          {CATEGORY_BUTTONS.map((btn, i) => (
-            <button key={btn.label} onClick={() => { window.location.href = btn.url }}
-                    className={`shrink-0 px-4 py-2 rounded-full bg-gray-100 text-[13px] font-medium text-gray-600 active:scale-95 transition-transform ${navVisible ? '' : 'opacity-0'}`}
-                    style={navVisible ? { animation: 'slide-in-left 0.5s ease-out forwards', animationDelay: `${i * 200}ms`, opacity: 0 } : undefined}>
-              {btn.label}
-            </button>
-          ))}
-        </div>
 
         {/* Loading Skeleton */}
         {loading && (
@@ -694,20 +400,29 @@ export default function Home() {
               <LuckyCard products={products} onClickProduct={handleClickProduct} />
             )}
 
-            {/* Category Grid */}
-            {allCategories.length > 1 && (
+            {/* Telegram VVIP Hook */}
+            <div className="mt-6 mb-2 bg-gray-900 rounded-[20px] p-6 text-center shadow-xl border border-gray-800 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-[#F37021] opacity-10 blur-3xl rounded-full"></div>
+              <p className="text-white font-bold mb-4 text-[15px] tracking-tight relative z-10">🔮 내 진짜 운명의 아이템은?</p>
+              <button onClick={() => setShowVvipModal(true)} className="w-full py-3.5 bg-gradient-to-r from-[#F37021] to-[#FF8F50] text-white rounded-xl font-black text-[15px] shadow-lg active:scale-95 transition-transform relative z-10">
+                🃏 1:1 맞춤 운세 카드 뽑기 (무료)
+              </button>
+            </div>
+
+            {/* Category Tabs (V9 CATEGORY_BUTTONS) */}
+            {CATEGORY_BUTTONS.length > 1 && (
               <section id="category-section" className="mt-12" ref={categorySectionRef}>
                 <div ref={(el) => { categoryRef.current = el; categoryTabRef.current = el }} onMouseDown={onCategoryMouseDown} className="-mx-5 px-5 flex gap-2 overflow-x-auto no-scrollbar select-none cursor-grab active:cursor-grabbing">
-                  {allCategories.map((cat, i) => (
-                    <button key={cat.key} onClick={() => setActiveTab(cat.key)}
+                  {CATEGORY_BUTTONS.map((btn, i) => (
+                    <button key={btn.id} onClick={() => setActiveTab(btn.id)}
                             data-category-tab
-                            className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-all duration-700 ease-out ${effectiveTab === cat.key ? 'bg-gradient-to-r from-[#F37021] to-[#FF8F50] text-white active-tab' : 'bg-gray-100 text-gray-500'} ${categoryVisible ? '' : 'opacity-0 translate-y-4'}`}
+                            className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-all duration-700 ease-out ${activeTab === btn.id ? 'bg-gradient-to-r from-[#F37021] to-[#FF8F50] text-white active-tab' : 'bg-gray-100 text-gray-500'} ${categoryVisible ? '' : 'opacity-0 translate-y-4'}`}
                             style={categoryVisible ? { animation: 'slide-up 0.7s ease-out forwards', animationDelay: `${i * 150}ms`, opacity: 0 } : undefined}>
-                      {cat.label}
+                      {btn.label}
                     </button>
                   ))}
                 </div>
-                {effectiveTab && filteredProducts.length > 0 && (
+                {filteredProducts.length > 0 && (
                   <InfiniteProductGrid
                     filteredProducts={filteredProducts}
                     visibleCount={visibleCount}
@@ -726,28 +441,14 @@ export default function Home() {
       <Sidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        categories={categories}
+        categories={CATEGORY_BUTTONS.filter((b) => b.id !== 'ALL').map((b) => ({ key: b.id, label: b.label }))}
         onSelectCategory={(cat) => setActiveTab(cat)}
       />
 
-      {/* ⭐ 숨겨진 황금 티켓 팝업 (오류 번호 입력 시 등장) */}
-      <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-500 ${showGoldenTicket ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-        <div className={`bg-gradient-to-br from-[#FFD700] to-[#F37021] p-[3px] rounded-2xl shadow-2xl max-w-[320px] w-[85%] transform transition-all duration-500 ${showGoldenTicket ? 'scale-100 translate-y-0' : 'scale-90 translate-y-8'}`}>
-          <div className="bg-white p-6 rounded-[14px] text-center flex flex-col items-center">
-            <div className="text-5xl mb-3 animate-bounce">🎉</div>
-            <h3 className="text-lg font-black text-[#F37021] mb-2 tracking-tight">앗! 숨겨진 황금 코드 발견!</h3>
-            <p className="text-[14px] font-medium text-gray-700 leading-relaxed mb-5">
-              다온픽이 몰래 준비한<br/>
-              <strong className="text-gray-900">반짝특가 비밀통로</strong>가 열렸습니다!
-            </p>
-            <div className="flex items-center gap-2 text-xs font-bold text-gray-400">
-              <div className="w-4 h-4 border-2 border-gray-200 border-t-[#F37021] rounded-full animate-spin"></div>
-              황금박스로 이동 중...
-            </div>
-          </div>
-        </div>
-      </div>
-
+      {/* Modals */}
+      <GoldenTicketModal isOpen={showGoldenTicket} loadingPhrase={loadingPhrase} />
+      <OosFallbackModal oosPopup={oosPopup} onConfirm={handleOosConfirm} onClose={() => setOosPopup({ show: false, product: null })} />
+      <VvipLoungeModal isOpen={showVvipModal} onClose={() => setShowVvipModal(false)} />
     </div>
   )
 }
