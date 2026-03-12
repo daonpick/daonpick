@@ -89,11 +89,11 @@ function useHorizontalScroll() {
 const GOLDBOX_URL = 'https://link.coupang.com/a/dQHV5K';
 
 const CATEGORY_BUTTONS = [
-  { label: '🔒 프라이빗', url: 'https://link.coupang.com/a/dNKFsQ' },
-  { label: '✨ 베네핏', url: 'https://link.coupang.com/a/dNKLhu' },
-  { label: '⚡ 오픈런', url: 'https://link.coupang.com/a/dNKQGF' },
-  { label: '🍽️ 다이닝', url: 'https://link.coupang.com/a/dNKRLu' },
-  { label: '✈️ 스테이', url: 'https://link.coupang.com/a/dNKLIg' },
+  { label: '💎 블랙라벨', url: 'https://link.coupang.com/a/dNKFsQ' },
+  { label: '🎁 테마라운지', url: 'https://link.coupang.com/a/dNKLhu' },
+  { label: '⚡ 플래시딜', url: 'https://link.coupang.com/a/dNKQGF' },
+  { label: '🥗 프레시마켓', url: 'https://link.coupang.com/a/dNKRLu' },
+  { label: '✈️ 히든게이트', url: 'https://link.coupang.com/a/dNKLIg' },
 ]
 
 const formatFakeViews = (baseViews, productCode) => {
