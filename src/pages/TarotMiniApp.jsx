@@ -82,9 +82,8 @@ export default function TarotMiniApp() {
       if (!targetUrl.startsWith('http')) targetUrl = 'https://' + targetUrl;
     }
 
-    window.open(targetUrl, '_blank');
-    
-    // 0.5초 뒤 텔레그램 미니 앱 스스로 종료 (잔해물 제거)
+    window.Telegram?.WebApp?.openLink(targetUrl);
+
     setTimeout(() => {
       window.Telegram?.WebApp?.close();
     }, 500);
@@ -167,11 +166,14 @@ export default function TarotMiniApp() {
                   </div>
                 </div>
                 <div className="flex-1 p-5 flex flex-col bg-gradient-to-b from-white to-gray-50">
-                  <p className="text-[14px] font-medium text-gray-800 leading-relaxed flex-1 overflow-y-auto mb-4 tracking-tight whitespace-pre-wrap">
+                  <p className="text-[14px] font-medium text-gray-800 leading-relaxed text-justify break-keep flex-1 overflow-y-auto mb-4 tracking-tight whitespace-pre-wrap">
                     "{cardData.fortune_text}"
                   </p>
                   <button onClick={handleCheckout} className="w-full py-3.5 bg-gradient-to-r from-[#F37021] to-[#FF8F50] text-white rounded-xl font-black text-[15px] shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2">
-                    운명템 확인하기 <span className="text-lg">➔</span>
+                    ⚡ 실시간 최저가 보기
+                  </button>
+                  <button onClick={() => { window.Telegram?.WebApp?.openLink('https://daonpick.com'); }} className="bg-gray-100 text-gray-500 mt-2 py-3 rounded-xl font-bold text-[13px] active:scale-95 w-full flex items-center justify-center">
+                    🏠 다른 특가 더보기
                   </button>
                   <p className="text-[9px] text-gray-400 text-center mt-3">이 큐레이션은 쿠팡 파트너스 활동의 일환으로<br/>이에 따른 일정액의 수수료를 제공받습니다.</p>
                 </div>
