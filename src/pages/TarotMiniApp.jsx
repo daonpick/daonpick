@@ -9,11 +9,12 @@ export default function TarotMiniApp() {
   const pid = searchParams.get('pid');
   
   const [authFailed, setAuthFailed] = useState(false);
+  const [uidMismatch, setUidMismatch] = useState(false);
   const [loading, setLoading] = useState(true);
-  const[cardData, setCardData] = useState(null);
+  const [cardData, setCardData] = useState(null);
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // 17번 누락: 텔레그램 환경 보안 검증
+  // 17번 누락: 텔레그램 환경 보안 검증 + uid 대조
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
     tg?.ready();
@@ -25,7 +26,12 @@ export default function TarotMiniApp() {
         return;
       }
     }
-  },[]);
+
+    const tgUserId = tg?.initDataUnsafe?.user?.id;
+    if (uid && tgUserId && String(tgUserId) !== String(uid)) {
+      setUidMismatch(true);
+    }
+  }, [uid]);
 
   // 6번 누락: DB에서 상품 정보와 사주 텍스트 동시 조달
   useEffect(() => {
@@ -93,6 +99,28 @@ export default function TarotMiniApp() {
     return total >= 1000 ? (total / 1000).toFixed(1) + '천' : total.toLocaleString();
   }, [cardData]);
 
+  if (uidMismatch) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gradient-to-b from-[#0a0014] via-[#1a0033] to-[#0a0014] text-white p-5 text-center">
+        <div className="max-w-xs">
+          <span className="text-6xl block mb-5 animate-pulse">👁️</span>
+          <h1 className="text-xl font-black mb-3 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent leading-relaxed">
+            앗! 타인의 운명 카드를 엿보셨군요.
+          </h1>
+          <p className="text-gray-300 text-sm mb-8 leading-relaxed">
+            이제 당신만의 진짜 사주 명식을<br/>확인할 차례입니다.
+          </p>
+          <button
+            onClick={() => window.open('https://t.me/daonpick_v9_bot')}
+            className="w-full py-3.5 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-xl font-black text-[15px] shadow-lg active:scale-95 transition-transform"
+          >
+            👉 나의 무료 1:1 사주 확인하기
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (authFailed) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-900 text-white p-5 text-center">
@@ -133,7 +161,7 @@ export default function TarotMiniApp() {
               {/* 앞면 (상품 및 사주 텍스트) */}
               <div className="absolute inset-0 w-full h-full backface-hidden bg-white rounded-3xl shadow-[0_0_30px_rgba(243,112,33,0.3)] overflow-hidden flex flex-col rotate-y-180" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
                 <div className="h-[45%] bg-gray-100 relative">
-                  <img src={cardData.thumbnail_url} alt="product" className="w-full h-full object-cover" />
+                  <img src={cardData.thumbnail_url} alt="product" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x400/111/fff?text=Secret+Item' }} />
                   <div className="absolute top-3 left-3 bg-black/70 backdrop-blur text-white text-[10px] px-2 py-1 rounded-md font-bold">
                     👁️ {fakeViews}명 주목
                   </div>
