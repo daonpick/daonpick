@@ -218,11 +218,6 @@ const HOOK_PHRASES = {
   ],
 };
 
-const FALLBACK_HOOK = {
-  main: "우주의 기운이 당신을 이 상품으로 이끌었습니다.",
-  action: "망설이지 말고 지금 바로 확인해 보세요.",
-};
-
 /* ═══════════════════════════════════════════════════════════════
    Card Back Component (9장 공용 뒷면)
    ═══════════════════════════════════════════════════════════════ */
@@ -252,7 +247,7 @@ export default function TarotMiniApp() {
   const [showModal, setShowModal] = useState(true);
 
   const [animPhase, setAnimPhase] = useState('dealing');
-  const [selectedHook, setSelectedHook] = useState(FALLBACK_HOOK);
+  const [selectedHook, setSelectedHook] = useState(null);
 
   const preset = useMemo(
     () => PRESETS[Math.floor(Math.random() * PRESETS.length)],
@@ -323,18 +318,18 @@ export default function TarotMiniApp() {
       return () => clearTimeout(t);
     }
     if (animPhase === 'selecting') {
-      const t = setTimeout(() => {
-        const category = String(cardData.product_code || '').slice(0, 2);
-        const pool = HOOK_PHRASES[category];
-        const hook = pool
-          ? pool[Math.floor(Math.random() * pool.length)]
-          : FALLBACK_HOOK;
-        setSelectedHook(hook);
-        setAnimPhase('flipped');
-      }, 1200);
+      const t = setTimeout(() => setAnimPhase('flipped'), 1200);
       return () => clearTimeout(t);
     }
   }, [animPhase, loading, cardData]);
+
+  // ── cardData 확정 시 90종 Hook 랜덤 세팅 ──
+  useEffect(() => {
+    if (!cardData) return;
+    const prefix = String(cardData.category || cardData.product_code || '').substring(0, 2);
+    const phraseArray = HOOK_PHRASES[prefix] || HOOK_PHRASES["10"];
+    setSelectedHook(phraseArray[Math.floor(Math.random() * phraseArray.length)]);
+  }, [cardData]);
 
   // ── 쿠팡 이동 ──
   const handleCheckout = useCallback(() => {
@@ -522,11 +517,11 @@ export default function TarotMiniApp() {
                                   <div className="flex-1 p-5 flex flex-col bg-gradient-to-b from-white to-gray-50">
                                     <div className="mt-4 px-2 text-center break-keep flex-1 overflow-y-auto mb-4">
                                       <p className="text-gray-700 text-sm md:text-base leading-relaxed">
-                                        {selectedHook.main}
+                                        {selectedHook?.main}
                                       </p>
                                       <div className="h-3" />
                                       <p className="text-orange-600 font-bold text-sm md:text-base leading-relaxed drop-shadow-sm">
-                                        {selectedHook.action}
+                                        {selectedHook?.action}
                                       </p>
                                     </div>
 
