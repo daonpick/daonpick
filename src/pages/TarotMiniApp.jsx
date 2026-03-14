@@ -419,10 +419,15 @@ export default function TarotMiniApp() {
             className="fixed inset-0 z-[100] bg-black/65 backdrop-blur-md flex flex-col items-center justify-center"
             onClick={handleCloseModal}
           >
+            {/* 최상단 공정위 배너 (다온픽 1층 사이트와 일체감 형성) */}
+            <div className="absolute top-0 left-0 w-full bg-[#1e293b] text-white/80 text-[10px] md:text-xs py-1.5 text-center z-50">
+              이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
+            </div>
+
             {/* ✖ 닫기 (모바일 선명도 극대화) */}
             <button
               onClick={(e) => { e.stopPropagation(); handleCloseModal(); }}
-              className="absolute top-5 right-5 z-[999] w-11 h-11 flex items-center justify-center rounded-full bg-black/70 border-2 border-white/90 text-white text-2xl font-black shadow-[0_0_15px_rgba(255,255,255,0.6)] backdrop-blur-none"
+              className="absolute top-10 right-5 z-[999] w-11 h-11 flex items-center justify-center rounded-full bg-black/70 border-2 border-white/90 text-white text-2xl font-black shadow-[0_0_15px_rgba(255,255,255,0.6)] backdrop-blur-none"
               aria-label="닫기"
             >
               ✕
@@ -532,9 +537,6 @@ export default function TarotMiniApp() {
                                       ✨ 내 운명템 보러가기
                                     </button>
 
-                                    <p className="text-[9px] text-gray-400 text-center mt-3">
-                                      이 큐레이션은 쿠팡 파트너스 활동의 일환으로<br />이에 따른 일정액의 수수료를 제공받습니다.
-                                    </p>
                                   </div>
                                 </div>
                               )}
